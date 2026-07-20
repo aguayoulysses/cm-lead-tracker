@@ -7,7 +7,7 @@ import { LeadCard } from '@/components/lead-card';
 import { CalendarMonth } from '@/components/calendar-month';
 import { EodPanel } from '@/components/eod-panel';
 
-type Tab = 'list' | 'attempted' | 'directory' | 'calendar' | 'eod';
+type Tab = 'list' | 'directory' | 'calendar' | 'eod';
 
 interface LeaderRow {
   closer: string;
@@ -47,7 +47,7 @@ export default function WorkPage() {
 
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab');
-    if (t === 'attempted' || t === 'directory' || t === 'calendar' || t === 'eod') setTab(t);
+    if (t === 'directory' || t === 'calendar' || t === 'eod') setTab(t);
   }, []);
 
   useEffect(() => {
@@ -142,7 +142,6 @@ export default function WorkPage() {
           <nav className="flex gap-1 rounded-lg border border-line bg-card p-0.5">
             {(
               [
-                ['attempted', 'No Contact Yet'],
                 ['directory', 'All Leads'],
                 ['calendar', 'Calendar'],
                 ['eod', 'End of Day'],
@@ -171,13 +170,8 @@ export default function WorkPage() {
       {leaders.length > 0 && tab !== 'eod' && <Leaderboard rows={leaders} />}
 
       {tab === 'list' && buckets && (
-        <div className="mx-auto max-w-2xl">
+        <div className="grid items-start gap-5 md:grid-cols-2">
           <FreshBucket leads={buckets.fresh} onOpen={openFromFresh} />
-        </div>
-      )}
-
-      {tab === 'attempted' && buckets && (
-        <div className="mx-auto max-w-2xl">
           <AttemptedBucket leads={buckets.attempted} onOpen={openFromAttempted} />
         </div>
       )}
