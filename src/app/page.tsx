@@ -180,12 +180,6 @@ export default function WorkPage() {
       {tab === 'directory' && <Directory closers={closers} onOpen={(id) => { setQueue([]); setOpenLead(id); }} />}
       {tab === 'calendar' && buckets && (
         <>
-          <AppointmentsToday
-            closer={closer}
-            tick={reloadTick}
-            onOpenLead={(id) => { setQueue([]); setOpenLead(id); }}
-            onChanged={loadBuckets}
-          />
           {buckets.overdue.length + buckets.dueToday.length > 0 && (
             <button
               onClick={startFollowUpQueue}
@@ -197,6 +191,14 @@ export default function WorkPage() {
             </button>
           )}
           <CalendarMonth closer={closer} onOpenLead={(id) => { setQueue([]); setOpenLead(id); }} />
+          <div className="mt-5">
+            <AppointmentsToday
+              closer={closer}
+              tick={reloadTick}
+              onOpenLead={(id) => { setQueue([]); setOpenLead(id); }}
+              onChanged={loadBuckets}
+            />
+          </div>
         </>
       )}
 
