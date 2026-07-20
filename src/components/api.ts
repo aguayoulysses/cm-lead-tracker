@@ -19,8 +19,15 @@ export interface BucketLead {
   date: string;
 }
 
+export interface FreshLead extends BucketLead {
+  dateSubmitted: string | null;
+  timeSubmitted: string;
+  attempted: boolean;
+}
+
 export interface Buckets {
   today: string;
+  fresh: FreshLead[];
   overdue: BucketLead[];
   dueToday: BucketLead[];
   next7: BucketLead[];
@@ -39,6 +46,8 @@ export interface LeadDetail {
     adName: string;
     status: string;
     contactedBy: string;
+    firstContactAt: string | null;
+    firstContactBy: string;
     followUpDate: string | null;
     apptDate: string | null;
     apptTime: string;

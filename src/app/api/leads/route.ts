@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
 import { leads } from '@/db/schema';
@@ -39,6 +39,27 @@ export async function GET(req: NextRequest) {
       leads: rows.map((l) => ({ ...l, name: `${l.firstName} ${l.lastName}`.trim() })),
     });
   }
+  // Fresh pool: brand-new, never-contacted leads. Everyone sees these
+  // regardless of the closer filter — first contact claims them. Oldest
+  // first: the longest-waiting lead is the most urgent (speed to lead).
+  const freshRows = await db
+    .select({
+      id: leads.id,
+      firstName: leads.firstName,
+      lastName: leads.lastName,
+      status: leads.status,
+      phone: leads.phone,
+      contactedBy: leads.contactedBy,
+      followUpDate: leads.followUpDate,
+      dateSubmitted: leads.dateSubmitted,
+      timeSubmitted: leads.timeSubmitted,
+      attempt1At: leads.attempt1At,
+      createdAt: leads.createdAt,
+    })
+    .from(leads)
+    .where(and(eq(leads.status, 'New'), eq(leads.followUpNeeded, true)));
+  freshRows.sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+
   const rows = await db
     .select({
       id: leads.id,
@@ -51,7 +72,15 @@ export async function GET(req: NextRequest) {
       followUpDate: leads.followUpDate,
     })
     .from(leads)
-    .where(and(eq(leads.followUpNeeded, true), ...(closer !== 'All' ? [eq(leads.contactedBy, closer)] : [])));
+    .where(
+      and(
+        eq(leads.followUpNeeded, true),
+        ne(leads.status, 'New'),
+        // A closer sees their own leads AND the unowned pool (nobody has made
+        // contact yet, so those are still up for grabs).
+        ...(closer !== 'All' ? [or(eq(leads.contactedBy, closer), eq(leads.contactedBy, ''))!] : []),
+      ),
+    );
 
   const today = todayInTz();
   const buckets = bucketize(rows, today);
@@ -65,6 +94,17 @@ export async function GET(req: NextRequest) {
   });
   return NextResponse.json({
     today,
+    fresh: freshRows.map((l) => ({
+      id: l.id,
+      name: `${l.firstName} ${l.lastName}`.trim(),
+      status: l.status,
+      phone: l.phone,
+      by: l.contactedBy,
+      date: l.followUpDate,
+      dateSubmitted: l.dateSubmitted,
+      timeSubmitted: l.timeSubmitted,
+      attempted: !!l.attempt1At,
+    })),
     overdue: buckets.overdue.map(shape),
     dueToday: buckets.dueToday.map(shape),
     next7: buckets.next7.map(shape),

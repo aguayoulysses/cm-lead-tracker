@@ -51,6 +51,16 @@ export function HeaderMenu() {
             <span className="text-sm font-semibold text-ink">Closer onboarding</span>
             <span className="block text-xs text-muted">Tools walkthrough &amp; SOPs — opens in a new tab</span>
           </a>
+          <a
+            href="/daily-flow.html"
+            target="_blank"
+            rel="noopener"
+            onClick={() => setOpen(false)}
+            className="block border-t border-line px-3 py-2.5 hover:bg-bluesoft"
+          >
+            <span className="text-sm font-semibold text-ink">Daily flow</span>
+            <span className="block text-xs text-muted">Your day in order — queue, calls, forms, EOD, KPIs</span>
+          </a>
         </div>
       )}
     </div>

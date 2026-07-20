@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { api, statusChip, fmtMoney, type Buckets, type BucketLead } from '@/components/api';
+import { api, statusChip, fmtMoney, type Buckets, type BucketLead, type FreshLead } from '@/components/api';
 import { Avatar } from '@/components/avatar';
 import { LeadCard } from '@/components/lead-card';
 import { CalendarMonth } from '@/components/calendar-month';
@@ -68,10 +68,10 @@ export default function WorkPage() {
     localStorage.setItem('cmCloser', c);
   }
 
-  /** Open a lead as part of the work queue (overdue first, then due today). */
+  /** Open a lead as part of the work queue (new leads first, then overdue, then due today). */
   function openFromBuckets(id: number) {
     if (!buckets) return;
-    const q = [...buckets.overdue, ...buckets.dueToday].map((l) => l.id);
+    const q = [...buckets.fresh, ...buckets.overdue, ...buckets.dueToday].map((l) => l.id);
     setQueue(q.includes(id) ? q : []);
     setOpenLead(id);
   }
@@ -149,16 +149,18 @@ export default function WorkPage() {
 
       {tab === 'list' && buckets && (
         <>
-          {(buckets.overdue.length > 0 || buckets.dueToday.length > 0) && (
+          {(buckets.fresh.length > 0 || buckets.overdue.length > 0 || buckets.dueToday.length > 0) && (
             <button
-              onClick={() => openFromBuckets([...buckets.overdue, ...buckets.dueToday][0].id)}
+              onClick={() => openFromBuckets([...buckets.fresh, ...buckets.overdue, ...buckets.dueToday][0].id)}
               className="mb-4 w-full rounded-xl bg-navy py-3 text-sm font-bold text-white shadow-sm hover:bg-navydeep"
             >
-              ▶ Work the queue — {buckets.overdue.length + buckets.dueToday.length} leads due
-              {closer !== 'All' ? ` for ${closer}` : ''}
+              ▶ Work the queue — {buckets.fresh.length + buckets.overdue.length + buckets.dueToday.length} leads
+              {buckets.fresh.length > 0 && ` (${buckets.fresh.length} new)`}
+              {closer !== 'All' ? ` · working as ${closer}` : ''}
             </button>
           )}
-          <div className="grid items-start gap-5 md:grid-cols-3">
+          <div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <FreshBucket leads={buckets.fresh} onOpen={openFromBuckets} />
             <Bucket tone="red" label="Overdue" leads={buckets.overdue} onOpen={openFromBuckets} />
             <Bucket tone="amber" label="Due today" leads={buckets.dueToday} onOpen={openFromBuckets} />
             <Bucket tone="blue" label="Next 7 days" leads={buckets.next7} onOpen={(id) => { setQueue([]); setOpenLead(id); }} />
@@ -224,6 +226,77 @@ function Leaderboard({ rows }: { rows: LeaderRow[] }) {
             </p>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** Minutes a fresh lead has been waiting, from its Chicago-time submission. */
+function waitingMinutes(dateSubmitted: string | null, timeSubmitted: string): number | null {
+  if (!dateSubmitted) return null;
+  const m = timeSubmitted.trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)?/);
+  let mins = 0;
+  if (m) {
+    let h = Number(m[1]);
+    const ap = m[3]?.toLowerCase();
+    if (ap === 'pm' && h < 12) h += 12;
+    if (ap === 'am' && h === 12) h = 0;
+    mins = h * 60 + Number(m[2]);
+  }
+  const [y, mo, d] = dateSubmitted.split('-').map(Number);
+  const submitted = Date.UTC(y, mo - 1, d) / 60000 + mins;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Chicago',
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date());
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  const now = Date.UTC(get('year'), get('month') - 1, get('day')) / 60000 + get('hour') * 60 + get('minute');
+  return Math.max(0, Math.round(now - submitted));
+}
+
+function waitingLabel(mins: number | null): string {
+  if (mins == null) return '';
+  if (mins < 60) return `${mins}m`;
+  if (mins < 60 * 24) return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  return `${Math.floor(mins / 1440)}d`;
+}
+
+function FreshBucket({ leads, onOpen }: { leads: FreshLead[]; onOpen: (id: number) => void }) {
+  return (
+    <div className="card overflow-hidden">
+      <div className="h-1 bg-green" />
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-green" />
+        <span className="eyebrow text-muted">New leads</span>
+        <span className="ml-auto rounded-full bg-greensoft px-2 py-0.5 text-xs font-semibold text-greenink">{leads.length}</span>
+      </div>
+      <p className="px-4 pb-2 text-[11px] text-faint">Open pool — first contact claims the lead</p>
+      {leads.length === 0 && <p className="px-4 pb-4 text-sm text-faint">No new leads waiting.</p>}
+      <div className="max-h-[60vh] overflow-y-auto">
+        {leads.map((l) => {
+          const mins = waitingMinutes(l.dateSubmitted, l.timeSubmitted);
+          const hot = mins != null && mins <= 30;
+          return (
+            <button
+              key={l.id}
+              onClick={() => onOpen(l.id)}
+              className="block w-full border-t border-line px-4 py-2.5 text-left transition-colors hover:bg-greensoft/50"
+            >
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="truncate text-sm font-semibold">{l.name}</span>
+                {mins != null && (
+                  <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-bold ${hot ? 'bg-greensoft text-greenink' : 'bg-redsoft text-redink'}`}>
+                    ⏱ {waitingLabel(mins)}
+                  </span>
+                )}
+              </span>
+              <span className="mt-1 flex items-center gap-2 text-[11px] text-faint">
+                {l.phone}
+                {l.attempted && <span className="text-amberink">· attempted, no contact yet</span>}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -180,6 +180,11 @@ export function LeadCard({
 
         {detail && (
           <>
+            {!detail.lead.contactedBy && (
+              <div className="mb-3 rounded-lg border border-green/40 bg-greensoft px-3 py-2 text-xs font-medium text-greenink">
+                Open lead — whoever makes first contact claims it. Attempts and voicemails don&rsquo;t count.
+              </div>
+            )}
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-xl font-bold text-navydeep">
                 {detail.lead.firstName} {detail.lead.lastName}
@@ -220,6 +225,12 @@ export function LeadCard({
                   )}
                   {detail.lead.contactedBy && <> &middot; Closer {detail.lead.contactedBy}</>}
                 </p>
+                {detail.lead.firstContactAt && (
+                  <p>
+                    First contact {detail.lead.firstContactAt.slice(0, 16).replace('T', ' ')}
+                    {detail.lead.firstContactBy && <> by {detail.lead.firstContactBy}</>}
+                  </p>
+                )}
               </div>
             </div>
 

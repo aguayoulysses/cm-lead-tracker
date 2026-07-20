@@ -8,9 +8,12 @@ to the machine running the app.
 
 `POST /api/webhook/lead` creates a lead in the tracker's database. The follow-up engine
 immediately takes over: the lead gets `status = New`, `Follow-Up Needed = Yes`, and a
-follow-up date of **today**, so it appears in the closers' **DUE TODAY** bucket on the
-Work screen within one refresh. No other wiring is needed downstream — touches, cadence,
-calendar, and stats all key off the lead row this endpoint creates.
+follow-up date of **today**, so it appears in the **NEW LEADS** pool on the Work screen
+within one refresh — visible to every rep with a waiting timer. Ownership follows the
+first-contact rule: whoever actually reaches the lead (pickup / reply) claims it;
+attempts and voicemails don't. `timeSubmitted` matters — it drives the speed-to-lead
+and speed-to-first-contact metrics, so map it if the source has it. No other wiring is
+needed downstream — touches, cadence, calendar, and stats all key off this lead row.
 
 The endpoint ships **disabled** so nothing can post garbage before ads are live.
 
@@ -96,7 +99,7 @@ curl -s -X POST localhost:3010/api/webhook/lead \
 
 - [ ] `curl` above returns `201 {"leadId": ...}`.
 - [ ] Re-running the exact same curl returns `{"deduped": true, ...}`.
-- [ ] Open `http://<host>:3010` → the lead is in **DUE TODAY** with status **New**.
+- [ ] Open `http://<host>:3010` → the lead is in **NEW LEADS** with a waiting timer.
 - [ ] Open the lead card → attribution line shows `campaign > ad set > ad`.
 - [ ] Log an outcome on it → it reschedules per cadence and a touch appears.
 - [ ] `http://<host>:3010/stats` → Total Leads incremented; the ad set appears in BY AD SET.

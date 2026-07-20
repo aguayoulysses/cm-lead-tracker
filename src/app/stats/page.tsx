@@ -27,6 +27,7 @@ interface Scorecard {
     cashCollected: number;
     commission: number;
     avgSpeedToLeadMin: number | null;
+    avgFirstContactMin: number | null;
   };
   rates: { connect: number | null; showUp: number | null; close: number | null };
 }
@@ -215,7 +216,8 @@ export default function StatsPage() {
               <Row label="Contract value (1x + 12mo MRR)" value={fmtMoney(M.contractValue)} strong />
               <Row label="Cash collected" value={fmtMoney(M.cashCollected)} />
               <Row label="Commission (est.)" value={fmtMoney(M.commission)} />
-              <Row label="Avg speed to lead" value={M.avgSpeedToLeadMin != null ? `${M.avgSpeedToLeadMin} min` : 'n/a'} />
+              <Row label="Avg speed to first attempt" value={M.avgSpeedToLeadMin != null ? `${M.avgSpeedToLeadMin} min` : 'n/a'} />
+              <Row label="Avg speed to first contact" value={M.avgFirstContactMin != null ? `${M.avgFirstContactMin} min` : 'n/a'} />
             </Section>
           </div>
         </>

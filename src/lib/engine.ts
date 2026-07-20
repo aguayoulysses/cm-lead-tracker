@@ -16,6 +16,18 @@ export const DEFAULT_FOLLOWUP_DAYS = 3;
 
 export const CLOSED_STATUSES = ['Closed Won', 'Closed Lost', 'Not Interested', 'Bad Number'];
 
+/**
+ * Statuses that imply the lead actually engaged (a conversation happened).
+ * Attempt-only statuses (No Answer, Left Voicemail, Bad Number) are NOT contact.
+ */
+export const CONTACT_STATUSES = ['Contacted', 'Booked', 'Nurture', 'Not Interested', 'Closed Won', 'Closed Lost'];
+
+/** Did this outcome constitute real contact? Pickup on a call, or an engaged status. */
+export function madeContact(input: Pick<OutcomeInput, 'status' | 'channel' | 'pickedUp'>): boolean {
+  if (input.channel === 'Call' && input.pickedUp) return true;
+  return CONTACT_STATUSES.includes(String(input.status || '').trim());
+}
+
 export const CHANNELS = ['Call', 'Text', 'Email', 'DM'] as const;
 export type Channel = (typeof CHANNELS)[number];
 
@@ -37,6 +49,7 @@ export interface LeadState {
   oneTimeValue: number;
   mrrValue: number;
   cashCollected: number;
+  firstContactAt: string | null;
 }
 
 export interface OutcomeInput {
@@ -71,6 +84,8 @@ export interface LeadPatch {
   oneTimeValue?: number;
   mrrValue?: number;
   cashCollected?: number;
+  firstContactAt?: string;
+  firstContactBy?: string;
 }
 
 export interface TouchRecord {
@@ -172,18 +187,26 @@ export function applyStatus(
     patch.qualified = input.qualified;
   }
 
-  // Auto-claim: whoever logs the first outcome on an unowned lead becomes its
-  // closer (broadened from the sheet, which only claimed on Call outcomes).
+  // Ownership: attempts do NOT claim a lead. Whoever makes actual CONTACT
+  // first (pickup on a call, or an engaged status) claims it. A no-answer
+  // call leaves the lead in the open pool for whoever connects next.
+  const actor = input.actingCloser && input.actingCloser !== 'All' ? input.actingCloser : '';
+  const contact = madeContact({ status, channel: input.channel, pickedUp: input.pickedUp });
   let by = lead.contactedBy;
-  if (!by && input.actingCloser && input.actingCloser !== 'All') {
-    patch.contactedBy = input.actingCloser;
-    by = input.actingCloser;
+  if (contact && !by && actor) {
+    patch.contactedBy = actor;
+    by = actor;
+  }
+  if (contact && !lead.firstContactAt) {
+    patch.firstContactAt = now;
+    patch.firstContactBy = actor || by;
   }
 
   const touch: TouchRecord = {
     at: now,
     what: status,
-    by,
+    // The touch records who actually did the work, owned or not.
+    by: actor || by,
     nextFollowUp: patch.followUpDate,
     note: input.note || '',
     channel: input.channel || '',

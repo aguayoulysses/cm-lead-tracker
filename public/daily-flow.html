@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="only light">
+<meta name="darkreader-lock">
+<title>Cavenaugh Media | Closer Daily Flow</title>
+<style>
+  :root {
+    color-scheme: only light;
+    --ink: #16283E;
+    --navy: #1D4E7E;
+    --navy-deep: #1D3A57;
+    --blue: #4E86C2;
+    --blue-ink: #2F62A0;
+    --blue-soft: #EAF2FA;
+    --muted: #4C6076;
+    --board: #FFFFFF;
+    --dot: #DCE5F0;
+    --line: #D8E2EE;
+    --wire: #9FB4CC;
+    --green: #2C7A57;
+    --green-ink: #226347;
+    --green-soft: #E3F1EA;
+    --amber-soft: #FFF6E0;
+    --amber-ink: #8A6210;
+    --red-soft: #FBEAEA;
+    --red-ink: #A34848;
+    --shadow: 0 1px 2px rgba(22,40,62,0.06), 0 8px 20px rgba(22,40,62,0.08);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--board);
+    background-image: radial-gradient(circle, var(--dot) 1.6px, transparent 1.6px);
+    background-size: 26px 26px;
+    color: var(--ink);
+    font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 120px; }
+
+  header.hero {
+    display: flex; gap: 28px; align-items: center;
+    margin-bottom: 26px;
+  }
+  header.hero img { width: 150px; height: auto; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.18em; font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 6px; }
+  header.hero h1 { font-size: 36px; line-height: 1.08; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.01em; }
+  header.hero p { color: var(--muted); font-size: 15px; margin: 0; max-width: 58ch; line-height: 1.55; }
+
+  /* ---------- quick links strip ---------- */
+  .quick {
+    background: var(--navy);
+    border-radius: 16px; padding: 18px 22px;
+    box-shadow: var(--shadow);
+    margin-bottom: 54px;
+  }
+  .quick .eyebrow { color: #A9C6E4; margin-bottom: 10px; }
+  .quick .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .quick a {
+    background: rgba(255,255,255,0.12);
+    color: #fff; text-decoration: none;
+    font-size: 13px; font-weight: 700;
+    padding: 8px 14px; border-radius: 9px;
+    border: 1px solid rgba(255,255,255,0.22);
+  }
+  .quick a:hover { background: rgba(255,255,255,0.24); }
+
+  /* ---------- stations ---------- */
+  .phase {
+    margin-left: 74px;
+    display: inline-block;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--amber-ink);
+    background: var(--amber-soft);
+    border-radius: 99px; padding: 4px 12px;
+    margin-bottom: 10px;
+  }
+  .station {
+    position: relative;
+    padding-left: 74px;
+    margin-bottom: 58px;
+  }
+  .station::before {
+    content: "";
+    position: absolute; left: 25px; top: 54px; bottom: -58px;
+    width: 2px;
+    background: repeating-linear-gradient(to bottom, var(--wire) 0 6px, transparent 6px 12px);
+  }
+  .station:last-of-type::before { display: none; }
+  .station .num {
+    position: absolute; left: 0; top: 0;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--navy); color: #fff;
+    display: grid; place-items: center;
+    font-size: 20px; font-weight: 700;
+    box-shadow: var(--shadow);
+  }
+  .station h2 { margin: 6px 0 6px; font-size: 23px; letter-spacing: -0.01em; }
+  .station > .why {
+    color: var(--muted); font-size: 14.5px; line-height: 1.6;
+    max-width: 62ch; margin: 0 0 18px;
+  }
+
+  /* ---------- cards ---------- */
+  .card {
+    background: var(--board);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+  }
+  .card .top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .card h3 { margin: 0; font-size: 16.5px; }
+  .badge {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 99px;
+    background: var(--blue-soft); color: var(--blue-ink);
+  }
+  .badge.form { background: var(--green-soft); color: var(--green-ink); }
+  .badge.primary { background: var(--navy); color: #fff; }
+  .card p { margin: 0 0 14px; font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 64ch; }
+  .card p:last-child { margin-bottom: 0; }
+  .card p b { color: var(--ink); }
+  .card ul { margin: 0 0 14px; padding-left: 20px; font-size: 14px; line-height: 1.7; color: var(--muted); }
+  .card ul b { color: var(--ink); }
+
+  a.open {
+    display: inline-block;
+    background: var(--navy); color: #fff;
+    text-decoration: none;
+    font-size: 13.5px; font-weight: 700;
+    padding: 10px 18px; border-radius: 9px;
+    transition: background .15s ease;
+  }
+  a.open:hover { background: var(--navy-deep); }
+  a.open.ghost {
+    background: transparent; color: var(--navy);
+    border: 1.5px solid var(--navy);
+  }
+  a.open.ghost:hover { background: var(--blue-soft); }
+
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 680px) { .pair { grid-template-columns: 1fr; } }
+
+  /* ---------- cadence table ---------- */
+  table.cadence { border-collapse: collapse; width: 100%; margin: 0 0 14px; font-size: 13.5px; }
+  table.cadence th {
+    text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line);
+  }
+  table.cadence td { padding: 8px 10px; border-bottom: 1px solid var(--line); color: var(--ink); }
+  table.cadence td:last-child { font-weight: 700; color: var(--navy); white-space: nowrap; }
+  table.cadence tr:last-child td { border-bottom: none; }
+
+  .buckets { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+  .buckets span { font-size: 12.5px; font-weight: 700; border-radius: 8px; padding: 6px 12px; }
+  .buckets .red { background: var(--red-soft); color: var(--red-ink); }
+  .buckets .amber { background: var(--amber-soft); color: var(--amber-ink); }
+  .buckets .blue { background: var(--blue-soft); color: var(--blue-ink); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <img src="/onboarding-logo.png" alt="Cavenaugh Media">
+    <div>
+      <div class="eyebrow">Sales Team</div>
+      <h1>Closer Daily Flow</h1>
+      <p>Your day, in order: what to do, when to do it, and where everything lives. Keep this open, work top to bottom, every day.</p>
+    </div>
+  </header>
+
+  <div class="quick">
+    <div class="eyebrow">Grab fast, mid-call</div>
+    <div class="row">
+      <a href="/" target="_blank" rel="noopener">Lead Tracker</a>
+      <a href="https://cavenaugh-growth-system.vercel.app/offer#offer" target="_blank" rel="noopener">Offer Page</a>
+      <a href="https://link.cavenaughmedia.com/widget/form/0on3JltBrs9TxDm6RN1a" target="_blank" rel="noopener">Setter Form</a>
+      <a href="https://link.cavenaughmedia.com/widget/form/UEam30m10pZWvSKBBPJ7?notrack=true" target="_blank" rel="noopener">Closer Form</a>
+      <a href="https://cavenaugh-dq-board.vercel.app/" target="_blank" rel="noopener">DQ Board</a>
+      <a href="https://docs.google.com/document/d/1HPZdgfcMzE3ydJxLEIw_17Taa2qcdNE-T2kGzYkJ1Hs/edit" target="_blank" rel="noopener">Call Framework</a>
+    </div>
+  </div>
+
+  <!-- 1 -->
+  <div class="phase">Morning · start of day</div>
+  <section class="station">
+    <div class="num"><b>1</b></div>
+    <h2>Open the Tracker, Clear the Red</h2>
+    <p class="why">Everything starts in the Lead Tracker. Pick your name at the top left so you see your leads, then look at the three buckets.</p>
+    <div class="card">
+      <div class="top"><h3>Work the Queue</h3><span class="badge primary">Tracker</span></div>
+      <div class="buckets"><span class="red">Overdue</span><span class="amber">Due today</span><span class="blue">Next 7 days</span></div>
+      <p>Hit the <b>&#9654; Work the queue</b> button. It walks you through every overdue and due-today lead one card at a time: log the touch, save, next card. Do not cherry-pick. The queue is empty when Overdue and Due today are both at zero.</p>
+      <a class="open" href="/" target="_blank" rel="noopener">Open the tracker →</a>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <div class="phase">The moment a new lead drops · interrupt everything</div>
+  <section class="station">
+    <div class="num"><b>2</b></div>
+    <h2>Speed to Lead</h2>
+    <p class="why">Speed to lead is a tracked KPI. The clock starts the second the new-lead notification lands, and it only stops when someone calls. Unless you are on a live call, a fresh lead outranks whatever you are doing.</p>
+    <div class="card">
+      <div class="top"><h3>Claim It, Call It, Log It</h3><span class="badge primary">Tracker</span></div>
+      <ul>
+        <li><b>Claim it.</b> Notification comes in and nobody has taken ownership? It is yours. Say so where the team can see it so two people do not call the same lead.</li>
+        <li><b>Call it now.</b> Minutes, not hours. A lead called back immediately picks up; the same lead an hour later is a voicemail.</li>
+        <li><b>Log it immediately.</b> Open the lead in the tracker (use + New lead if it is not there yet) and log the touch. That first logged attempt is your speed-to-lead record. A call that is not logged did not happen, and an unlogged claim means the lead sits unowned.</li>
+      </ul>
+      <p>No answer? The cadence from station 3 takes over: it goes to +1 day automatically and stays in your queue.</p>
+      <a class="open" href="/" target="_blank" rel="noopener">Open the tracker →</a>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <div class="phase">All day · every touch</div>
+  <section class="station">
+    <div class="num"><b>3</b></div>
+    <h2>Log Every Touch, Let the Cadence Work</h2>
+    <p class="why">Every call, text, email, or DM gets logged on the lead card the moment it happens. The tracker schedules your next follow-up for you based on the outcome. Never keep follow-ups in your head.</p>
+    <div class="card">
+      <div class="top"><h3>The Follow-Up Cadence</h3><span class="badge">Automatic</span></div>
+      <table class="cadence">
+        <tr><th>Outcome you log</th><th>Next follow-up</th></tr>
+        <tr><td>Attempted, no answer</td><td>+1 day</td></tr>
+        <tr><td>Left voicemail</td><td>+2 days</td></tr>
+        <tr><td>Contacted</td><td>+3 days</td></tr>
+        <tr><td>Nurture</td><td>+14 days</td></tr>
+        <tr><td>Booked</td><td>Appointment day</td></tr>
+        <tr><td>Closed / Not interested / Bad number</td><td>Stops</td></tr>
+      </table>
+      <p>You can override the date on the card when a lead asks for a specific day. Otherwise, trust the cadence.</p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <div class="phase">On a call</div>
+  <section class="station">
+    <div class="num"><b>4</b></div>
+    <h2>Run the Call</h2>
+    <p class="why">Same three tools, every call. Open them before you dial in.</p>
+    <div class="card">
+      <div class="top"><h3>Discovery &amp; Qualify</h3></div>
+      <p>Run discovery with the <b>First Call B2B Framework</b>, and check the lead against the <b>DQ Board</b> as you go. If they fail DQ, disqualify with respect and log it. That is a win for the roster.</p>
+      <p>When it is time to pitch, your default is the <b>Offer Page</b> and its case studies. Growth-system board for step-by-step buyers, slide deck for the general picture.</p>
+      <a class="open ghost" href="https://docs.google.com/document/d/1HPZdgfcMzE3ydJxLEIw_17Taa2qcdNE-T2kGzYkJ1Hs/edit" target="_blank" rel="noopener">Framework →</a>
+      <a class="open ghost" href="https://cavenaugh-dq-board.vercel.app/" target="_blank" rel="noopener">DQ Board →</a>
+      <a class="open" href="https://cavenaugh-growth-system.vercel.app/offer#offer" target="_blank" rel="noopener">Offer Page →</a>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <div class="phase">Right after every call · while it&rsquo;s fresh</div>
+  <section class="station">
+    <div class="num"><b>5</b></div>
+    <h2>Form First, Then the Tracker</h2>
+    <p class="why">Two things happen after every call, before you touch anything else. Details rot in minutes, so do this immediately.</p>
+    <div class="pair">
+      <div class="card">
+        <div class="top"><h3>1 · Post-Call Form</h3><span class="badge form">Form</span></div>
+        <p>Setting call gets the <b>setter form</b>. Closing call gets the <b>closer form</b>, win or lose.</p>
+        <a class="open" href="https://link.cavenaughmedia.com/widget/form/0on3JltBrs9TxDm6RN1a" target="_blank" rel="noopener">Setter form →</a>
+        <a class="open" href="https://link.cavenaughmedia.com/widget/form/UEam30m10pZWvSKBBPJ7?notrack=true" target="_blank" rel="noopener">Closer form →</a>
+      </div>
+      <div class="card">
+        <div class="top"><h3>2 · Log the Outcome</h3><span class="badge primary">Tracker</span></div>
+        <p>Open the lead card and log it: status, channel, qualified yes or no, appointment if you set one. <b>Closed Won requires the One-Time and MRR values</b>, plus cash collected. That is what feeds your commission and the stats.</p>
+        <a class="open" href="/" target="_blank" rel="noopener">Open the tracker →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <div class="phase">End of day · before you log off</div>
+  <section class="station">
+    <div class="num"><b>6</b></div>
+    <h2>File the End of Day Report</h2>
+    <p class="why">Last thing, every day. It takes thirty seconds and it keeps the team numbers honest.</p>
+    <div class="card">
+      <div class="top"><h3>End of Day Tab</h3><span class="badge primary">Tracker</span></div>
+      <p>On the Work page, open the <b>End of Day</b> tab. Enter your <b>no-shows</b> and <b>reschedules</b> for today&rsquo;s sales calls and save. It resets each morning, so yesterday cannot be backfilled. Do it before you close the laptop.</p>
+      <a class="open" href="/" target="_blank" rel="noopener">Open the tracker →</a>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <div class="phase">Weekly · know your numbers</div>
+  <section class="station">
+    <div class="num"><b>7</b></div>
+    <h2>Track Your KPIs</h2>
+    <p class="why">If you did stations 2, 3, 5, and 6 every day, your KPIs track themselves. This is where you read them. Speed to lead lives in station 2: it is measured from when the lead came in to your first logged touch.</p>
+    <div class="card">
+      <div class="top"><h3>Leaderboard &amp; Stats</h3><span class="badge">Tracker</span></div>
+      <ul>
+        <li><b>Leaderboard</b> (Work page): month-to-date dials, calls taken, deals won, contract value, cash collected, by closer.</li>
+        <li><b>Stats page</b>: the funnel scorecard, the money numbers, and ROAS by ad set for any date range.</li>
+      </ul>
+      <p>Check the leaderboard daily, sit with the Stats page once a week. Know your show rate, close rate, and cash collected before anyone asks you.</p>
+      <a class="open" href="/stats" target="_blank" rel="noopener">Open stats →</a>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

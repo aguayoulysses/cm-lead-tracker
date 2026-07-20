@@ -50,6 +50,8 @@ export const leads = sqliteTable(
     attempt1At: text('attempt1_at'), // ISO timestamp
     attempt2At: text('attempt2_at'),
     attempt3At: text('attempt3_at'),
+    firstContactAt: text('first_contact_at'), // when someone actually reached them
+    firstContactBy: text('first_contact_by').notNull().default(''),
     contactedBy: text('contacted_by').notNull().default(''), // closer name, matches sheet semantics
     qualified: text('qualified'), // 'Yes' | 'No' | null
 

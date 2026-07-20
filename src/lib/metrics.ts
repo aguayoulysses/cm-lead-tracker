@@ -95,15 +95,21 @@ export async function scorecard(f: StatsFilter) {
       dateSubmitted: leads.dateSubmitted,
       timeSubmitted: leads.timeSubmitted,
       attempt1At: leads.attempt1At,
+      firstContactAt: leads.firstContactAt,
     })
     .from(leads)
     .where(and(isNotNull(leads.dateSubmitted), gte(leads.dateSubmitted, f.from), lte(leads.dateSubmitted, f.to), ...closerCond));
-  const speeds = spdLeads
-    .map((l) => speedToLeadMinutes(l.dateSubmitted, l.timeSubmitted, l.attempt1At))
-    .filter((x): x is number => x != null && x >= 0);
-  const avgSpeedToLeadMin = speeds.length
-    ? Math.round((speeds.reduce((a, b) => a + b, 0) / speeds.length) * 10) / 10
-    : null;
+  const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null);
+  const avgSpeedToLeadMin = avg(
+    spdLeads
+      .map((l) => speedToLeadMinutes(l.dateSubmitted, l.timeSubmitted, l.attempt1At))
+      .filter((x): x is number => x != null && x >= 0),
+  );
+  const avgFirstContactMin = avg(
+    spdLeads
+      .map((l) => speedToLeadMinutes(l.dateSubmitted, l.timeSubmitted, l.firstContactAt))
+      .filter((x): x is number => x != null && x >= 0),
+  );
 
   const ratio = (a: number, b: number) => (b > 0 ? a / b : null);
 
@@ -126,6 +132,7 @@ export async function scorecard(f: StatsFilter) {
       cashCollected: m.cash,
       commission,
       avgSpeedToLeadMin,
+      avgFirstContactMin,
     },
     rates: {
       connect: ratio(k.pickups, k.dials),

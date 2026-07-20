@@ -25,7 +25,9 @@ export async function logOutcome(leadId: number, input: OutcomeInput) {
 
   const { patch, touch } = applyStatus(lead, input, now, today);
   const kpi = kpiRowForOutcome(input);
-  const closerForKpi = patch.contactedBy ?? lead.contactedBy;
+  // Dials/calls credit whoever did the work, even when the lead is unowned.
+  const actor = input.actingCloser && input.actingCloser !== 'All' ? input.actingCloser : '';
+  const closerForKpi = actor || patch.contactedBy || lead.contactedBy;
 
   await db.transaction(async (tx) => {
     await tx.update(leads).set({ ...patch, updatedAt: now }).where(eq(leads.id, leadId));

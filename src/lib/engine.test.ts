@@ -31,6 +31,7 @@ function lead(overrides: Partial<LeadState> = {}): LeadState {
     oneTimeValue: 0,
     mrrValue: 0,
     cashCollected: 0,
+    firstContactAt: null,
     ...overrides,
   };
 }
@@ -136,20 +137,54 @@ describe('applyStatus', () => {
     expect(applyStatus(lead(), { status: 'Contacted', qualified: '' }, NOW, TODAY).patch.qualified).toBeUndefined();
   });
 
-  it('auto-claims the acting closer on any first outcome for unowned leads', () => {
-    const { patch, touch } = applyStatus(lead(), { status: 'Contacted', channel: 'Call', actingCloser: 'Jack' }, NOW, TODAY);
-    expect(patch.contactedBy).toBe('Jack');
-    expect(touch.by).toBe('Jack');
-    // Text also claims now (broadened from the sheet's Call-only rule):
-    const r2 = applyStatus(lead(), { status: 'Contacted', channel: 'Text', actingCloser: 'Jack' }, NOW, TODAY);
-    expect(r2.patch.contactedBy).toBe('Jack');
-    // Never overwrites an owner:
-    const r3 = applyStatus(lead({ contactedBy: 'Cody' }), { status: 'Contacted', channel: 'Call', actingCloser: 'Jack' }, NOW, TODAY);
-    expect(r3.patch.contactedBy).toBeUndefined();
-    expect(r3.touch.by).toBe('Cody');
+  it('claims only on real CONTACT — attempts leave the lead in the open pool', () => {
+    // No-answer call: NOT claimed. Jack's work is still on the touch.
+    const miss = applyStatus(
+      lead(),
+      { status: 'Attempted - No Answer', channel: 'Call', pickedUp: false, actingCloser: 'Jack' },
+      NOW,
+      TODAY,
+    );
+    expect(miss.patch.contactedBy).toBeUndefined();
+    expect(miss.patch.firstContactAt).toBeUndefined();
+    expect(miss.touch.by).toBe('Jack');
+
+    // Voicemail: not contact either.
+    const vm = applyStatus(lead(), { status: 'Left Voicemail', channel: 'Call', actingCloser: 'Jack' }, NOW, TODAY);
+    expect(vm.patch.contactedBy).toBeUndefined();
+
+    // Pickup on a call: claimed + first contact stamped.
+    const hit = applyStatus(
+      lead(),
+      { status: 'Attempted - No Answer', channel: 'Call', pickedUp: true, actingCloser: 'Cody' },
+      NOW,
+      TODAY,
+    );
+    expect(hit.patch.contactedBy).toBe('Cody');
+    expect(hit.patch.firstContactAt).toBe(NOW);
+    expect(hit.patch.firstContactBy).toBe('Cody');
+
+    // Engaged status over text (they replied): claimed.
+    const text = applyStatus(lead(), { status: 'Contacted', channel: 'Text', actingCloser: 'Jack' }, NOW, TODAY);
+    expect(text.patch.contactedBy).toBe('Jack');
+
+    // Jack missed first, Cody connects later: Cody owns it.
+    const afterMiss = lead();
+    const cody = applyStatus(afterMiss, { status: 'Contacted', channel: 'Call', pickedUp: true, actingCloser: 'Cody' }, NOW, TODAY);
+    expect(cody.patch.contactedBy).toBe('Cody');
+
+    // Never overwrites an owner, and owner keeps credit on the touch only if no actor:
+    const owned = applyStatus(lead({ contactedBy: 'Cody' }), { status: 'Contacted', channel: 'Call', pickedUp: true, actingCloser: 'Jack' }, NOW, TODAY);
+    expect(owned.patch.contactedBy).toBeUndefined();
+    expect(owned.touch.by).toBe('Jack'); // Jack did the work even on Cody's lead
+
+    // firstContactAt never overwritten:
+    const already = applyStatus(lead({ firstContactAt: '2026-07-18T10:00:00' }), { status: 'Contacted', channel: 'Call', pickedUp: true, actingCloser: 'Jack' }, NOW, TODAY);
+    expect(already.patch.firstContactAt).toBeUndefined();
+
     // 'All' is not a closer:
-    const r4 = applyStatus(lead(), { status: 'Contacted', channel: 'Call', actingCloser: 'All' }, NOW, TODAY);
-    expect(r4.patch.contactedBy).toBeUndefined();
+    const all = applyStatus(lead(), { status: 'Contacted', channel: 'Call', pickedUp: true, actingCloser: 'All' }, NOW, TODAY);
+    expect(all.patch.contactedBy).toBeUndefined();
   });
 });
 
