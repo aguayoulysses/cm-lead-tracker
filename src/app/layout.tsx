@@ -16,10 +16,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen">
         <header className="sticky top-0 z-40 border-b border-line bg-card">
           <div className="mx-auto flex max-w-6xl items-center gap-8 px-5 py-3">
-            <span className="flex items-baseline gap-2">
-              <span className="text-[15px] font-bold tracking-wide text-navy">CAVENAUGH</span>
-              <span className="text-[13px] font-medium tracking-wide text-muted">Lead Tracker</span>
-            </span>
             <nav className="flex gap-6 text-sm font-medium">
               <Link href="/" className="text-ink hover:text-navy">
                 Work
