@@ -73,6 +73,7 @@ export default function StatsPage() {
   const [roas, setRoas] = useState<RoasRow[]>([]);
   const [ads, setAds] = useState<Record<string, AdRow[]>>({});
   const [spendDrafts, setSpendDrafts] = useState<Record<string, string>>({});
+  const [showLogDeal, setShowLogDeal] = useState(false);
 
   useEffect(() => {
     api<{ id: number; name: string }[]>('/api/closers').then((rows) => setClosers(['All', ...rows.map((r) => r.name)]));
@@ -146,7 +147,25 @@ export default function StatsPage() {
             }}
           />
         )}
+        <button
+          onClick={() => setShowLogDeal(true)}
+          className="ml-auto rounded-lg bg-green px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+        >
+          + Log deal
+        </button>
       </div>
+
+      {showLogDeal && (
+        <LogDealModal
+          closers={closers.filter((c) => c !== 'All')}
+          defaultCloser={closer !== 'All' ? closer : ''}
+          onClose={() => setShowLogDeal(false)}
+          onLogged={() => {
+            setShowLogDeal(false);
+            load();
+          }}
+        />
+      )}
 
       {byCloser.length > 0 && (
         <div className="card mb-5 overflow-hidden">
@@ -294,6 +313,126 @@ export default function StatsPage() {
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function LogDealModal({
+  closers,
+  defaultCloser,
+  onClose,
+  onLogged,
+}: {
+  closers: string[];
+  defaultCloser: string;
+  onClose: () => void;
+  onLogged: () => void;
+}) {
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    leadSource: 'Referral',
+    notes: '',
+    closer: defaultCloser,
+    oneTime: '',
+    mrr: '',
+    cash: '',
+    closedDate: '',
+  });
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    setForm((p) => ({ ...p, [k]: e.target.value }));
+
+  async function save() {
+    if (!form.firstName.trim()) return setError('Buyer first name is required.');
+    if (!form.closer) return setError('Pick the closer who gets credit.');
+    if (form.oneTime.trim() === '' || form.mrr.trim() === '')
+      return setError('One-Time and MRR are required — enter 0 if none.');
+    setSaving(true);
+    setError('');
+    try {
+      await api('/api/deals', {
+        method: 'POST',
+        body: JSON.stringify({
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          leadSource: form.leadSource.trim(),
+          notes: form.notes.trim(),
+          closer: form.closer,
+          oneTimeValue: Number(form.oneTime) || 0,
+          mrrValue: Number(form.mrr) || 0,
+          cashCollected: Number(form.cash) || 0,
+          closedDate: form.closedDate || null,
+        }),
+      });
+      onLogged();
+    } catch (e) {
+      setError((e as Error).message);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navydeep/40 p-4" onClick={onClose}>
+      <div className="card w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="mb-1 text-base font-bold">Log a deal</h3>
+        <p className="mb-3 text-xs text-muted">
+          For closes that never came through the pipeline (referrals, walk-ins). Saved as Closed Won — counts in every
+          stat and on the leaderboard.
+        </p>
+        {error && <p className="mb-2 rounded-lg bg-redsoft px-3 py-2 text-sm text-redink">{error}</p>}
+        <div className="grid grid-cols-2 gap-2">
+          <input placeholder="Buyer first name (required)" value={form.firstName} onChange={set('firstName')} className="field" />
+          <input placeholder="Last name" value={form.lastName} onChange={set('lastName')} className="field" />
+          <input placeholder="Phone" value={form.phone} onChange={set('phone')} className="field" />
+          <input placeholder="Email" value={form.email} onChange={set('email')} className="field" />
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[11px] font-medium text-muted">Closer (gets credit)</label>
+            <select value={form.closer} onChange={set('closer')} className="field mt-1">
+              <option value="">Pick a closer…</option>
+              {closers.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-muted">Close date (default today)</label>
+            <input type="date" value={form.closedDate} onChange={set('closedDate')} className="field mt-1" />
+          </div>
+        </div>
+        <div className="mt-2 rounded-lg bg-greensoft p-3">
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-[11px] font-medium text-greenink">One-time $</label>
+              <input type="number" min={0} value={form.oneTime} onChange={set('oneTime')} className="field mt-1 px-2" />
+            </div>
+            <div>
+              <label className="text-[11px] font-medium text-greenink">MRR $/mo</label>
+              <input type="number" min={0} value={form.mrr} onChange={set('mrr')} className="field mt-1 px-2" />
+            </div>
+            <div>
+              <label className="text-[11px] font-medium text-greenink">Cash collected $</label>
+              <input type="number" min={0} value={form.cash} onChange={set('cash')} className="field mt-1 px-2" />
+            </div>
+          </div>
+        </div>
+        <input placeholder="Source — e.g. Referral" value={form.leadSource} onChange={set('leadSource')} className="field mt-2" />
+        <textarea placeholder="Notes (what they bought, context)" value={form.notes} onChange={set('notes')} rows={2} className="field mt-2 mb-3" />
+        <button
+          onClick={save}
+          disabled={saving}
+          className="w-full rounded-lg bg-green py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Log deal as Closed Won'}
+        </button>
       </div>
     </div>
   );

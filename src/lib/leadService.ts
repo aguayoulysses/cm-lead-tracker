@@ -258,6 +258,72 @@ export async function updateDeal(
   return getLeadOrThrow(leadId);
 }
 
+export interface DirectDealInput {
+  firstName: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  leadSource?: string;
+  notes?: string;
+  closer: string;
+  oneTimeValue: number;
+  mrrValue: number;
+  cashCollected: number;
+  closedDate?: string | null; // YYYY-MM-DD, defaults to today
+}
+
+/**
+ * Log a deal closed outside the pipeline (referral, walk-in, anything that
+ * never lived here as a lead). Creates the record already Closed Won so every
+ * stat — leaderboard, scorecard money, close counts — picks it up.
+ */
+export async function logDirectDeal(input: DirectDealInput) {
+  const now = nowInTz();
+  const today = todayInTz();
+  const closedDate = input.closedDate || today;
+  const name = `${input.firstName} ${input.lastName ?? ''}`.trim();
+  const inserted = await db
+    .insert(leads)
+    .values({
+      source: 'manual',
+      firstName: input.firstName,
+      lastName: input.lastName ?? '',
+      phone: input.phone ?? '',
+      email: input.email ?? '',
+      notes: input.notes ?? '',
+      dateSubmitted: closedDate,
+      dayOfWeek: dayOfWeek(closedDate),
+      leadSource: input.leadSource || 'Referral',
+      status: 'Closed Won',
+      contactedBy: input.closer,
+      firstContactAt: now,
+      firstContactBy: input.closer,
+      followUpNeeded: false,
+      followUpDate: null,
+      oneTimeValue: input.oneTimeValue,
+      mrrValue: input.mrrValue,
+      cashCollected: input.cashCollected,
+      dateClosed: closedDate,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning({ id: leads.id });
+  const leadId = inserted[0].id;
+  await db.insert(touches).values({
+    leadId,
+    leadNameSnapshot: name,
+    phoneSnapshot: input.phone ?? '',
+    at: now,
+    what: 'Closed Won',
+    by: input.closer,
+    nextFollowUp: null,
+    note: `Deal logged directly (not in pipeline) · 1x $${input.oneTimeValue} · MRR $${input.mrrValue}/mo · cash $${input.cashCollected}`,
+    channel: '',
+    createdAt: now,
+  });
+  return leadId;
+}
+
 /** Lead card payload: lead + attempts + recent touches. */
 export async function getLeadCard(leadId: number) {
   const lead = await getLeadOrThrow(leadId);
