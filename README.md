@@ -9,6 +9,11 @@ Standalone replacement for the "C.M Lead Tracking V2" Google Sheet. Two screens:
 - **Stats** (`/stats`) — KPI scorecard (funnel / money / rates, closer + date filter),
   BY CLOSER table, BY AD SET attribution with inline ad-spend entry and annualized ROAS.
 
+Sales resources (also linked from the ⚙ header menu), hosted on Vercel:
+
+- Closer onboarding: https://cm-sales-resources.vercel.app/onboarding.html
+- Daily flow: https://cm-sales-resources.vercel.app/daily-flow.html
+
 The follow-up engine is a 1:1 port of the sheet's Apps Script: statuses, cadence
 (No Answer +1, Voicemail +2, Contacted +3, Nurture +14, default +3, Booked = appt day,
 closed statuses stop follow-ups), touch logging, and KPI rows. Engine rules live in

@@ -42,7 +42,7 @@ export function HeaderMenu() {
         <div className="card absolute top-full right-0 z-50 mt-2 w-64 overflow-hidden shadow-lg">
           <p className="eyebrow border-b border-line px-3 py-2 text-faint">Resources</p>
           <a
-            href="/onboarding.html"
+            href="https://cm-sales-resources.vercel.app/onboarding.html"
             target="_blank"
             rel="noopener"
             onClick={() => setOpen(false)}
@@ -52,7 +52,7 @@ export function HeaderMenu() {
             <span className="block text-xs text-muted">Tools walkthrough &amp; SOPs — opens in a new tab</span>
           </a>
           <a
-            href="/daily-flow.html"
+            href="https://cm-sales-resources.vercel.app/daily-flow.html"
             target="_blank"
             rel="noopener"
             onClick={() => setOpen(false)}
