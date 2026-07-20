@@ -91,15 +91,6 @@ export default function WorkPage() {
     setOpenLead(id);
   }
 
-  /** Start the follow-up queue (overdue first, then due today) — lives on the Calendar. */
-  function startFollowUpQueue() {
-    if (!buckets) return;
-    const q = [...buckets.overdue, ...buckets.dueToday].map((l) => l.id);
-    if (!q.length) return;
-    setQueue(q);
-    setOpenLead(q[0]);
-  }
-
   function advanceQueue(saved: boolean) {
     loadBuckets();
     if (queue.length && openLead != null) {
@@ -180,16 +171,6 @@ export default function WorkPage() {
       {tab === 'directory' && <Directory closers={closers} onOpen={(id) => { setQueue([]); setOpenLead(id); }} />}
       {tab === 'calendar' && buckets && (
         <>
-          {buckets.overdue.length + buckets.dueToday.length > 0 && (
-            <button
-              onClick={startFollowUpQueue}
-              className="mb-4 w-full rounded-xl bg-navy py-3 text-sm font-bold text-white shadow-sm hover:bg-navydeep"
-            >
-              ▶ Work the follow-up queue — {buckets.overdue.length + buckets.dueToday.length} due
-              {buckets.overdue.length > 0 && ` (${buckets.overdue.length} overdue)`}
-              {closer !== 'All' ? ` · working as ${closer}` : ''}
-            </button>
-          )}
           <CalendarMonth closer={closer} onOpenLead={(id) => { setQueue([]); setOpenLead(id); }} />
           <div className="mt-5">
             <AppointmentsToday
