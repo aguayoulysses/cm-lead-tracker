@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, eq, gte, isNotNull, lte, or } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, lte, ne, or } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { leads } from '@/db/schema';
 import { todayInTz } from '@/lib/dates';
@@ -34,7 +34,14 @@ export async function GET(req: NextRequest) {
     .where(
       and(
         or(
-          and(eq(leads.followUpNeeded, true), isNotNull(leads.followUpDate), gte(leads.followUpDate, from), lte(leads.followUpDate, to)),
+          // New leads live in the open pool on the Work screen, not here.
+          and(
+            eq(leads.followUpNeeded, true),
+            ne(leads.status, 'New'),
+            isNotNull(leads.followUpDate),
+            gte(leads.followUpDate, from),
+            lte(leads.followUpDate, to),
+          ),
           and(isNotNull(leads.apptDate), gte(leads.apptDate, from), lte(leads.apptDate, to)),
         ),
         ...closerCond,

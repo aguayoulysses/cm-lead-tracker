@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { api, statusChip, fmtMoney, type Buckets, type BucketLead, type FreshLead } from '@/components/api';
+import { api, statusChip, fmtMoney, type Buckets, type FreshLead } from '@/components/api';
 import { Avatar } from '@/components/avatar';
 import { LeadCard } from '@/components/lead-card';
 import { CalendarMonth } from '@/components/calendar-month';
@@ -68,12 +68,21 @@ export default function WorkPage() {
     localStorage.setItem('cmCloser', c);
   }
 
-  /** Open a lead as part of the work queue (new leads first, then overdue, then due today). */
-  function openFromBuckets(id: number) {
+  /** Open a fresh lead, cycling through the new-lead pool. */
+  function openFromFresh(id: number) {
     if (!buckets) return;
-    const q = [...buckets.fresh, ...buckets.overdue, ...buckets.dueToday].map((l) => l.id);
+    const q = buckets.fresh.map((l) => l.id);
     setQueue(q.includes(id) ? q : []);
     setOpenLead(id);
+  }
+
+  /** Start the follow-up queue (overdue first, then due today) — lives on the Calendar. */
+  function startFollowUpQueue() {
+    if (!buckets) return;
+    const q = [...buckets.overdue, ...buckets.dueToday].map((l) => l.id);
+    if (!q.length) return;
+    setQueue(q);
+    setOpenLead(q[0]);
   }
 
   function advanceQueue(saved: boolean) {
@@ -148,28 +157,27 @@ export default function WorkPage() {
       {leaders.length > 0 && tab !== 'eod' && <Leaderboard rows={leaders} />}
 
       {tab === 'list' && buckets && (
-        <>
-          {(buckets.fresh.length > 0 || buckets.overdue.length > 0 || buckets.dueToday.length > 0) && (
-            <button
-              onClick={() => openFromBuckets([...buckets.fresh, ...buckets.overdue, ...buckets.dueToday][0].id)}
-              className="mb-4 w-full rounded-xl bg-navy py-3 text-sm font-bold text-white shadow-sm hover:bg-navydeep"
-            >
-              ▶ Work the queue — {buckets.fresh.length + buckets.overdue.length + buckets.dueToday.length} leads
-              {buckets.fresh.length > 0 && ` (${buckets.fresh.length} new)`}
-              {closer !== 'All' ? ` · working as ${closer}` : ''}
-            </button>
-          )}
-          <div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-4">
-            <FreshBucket leads={buckets.fresh} onOpen={openFromBuckets} />
-            <Bucket tone="red" label="Overdue" leads={buckets.overdue} onOpen={openFromBuckets} />
-            <Bucket tone="amber" label="Due today" leads={buckets.dueToday} onOpen={openFromBuckets} />
-            <Bucket tone="blue" label="Next 7 days" leads={buckets.next7} onOpen={(id) => { setQueue([]); setOpenLead(id); }} />
-          </div>
-        </>
+        <div className="mx-auto max-w-2xl">
+          <FreshBucket leads={buckets.fresh} onOpen={openFromFresh} />
+        </div>
       )}
 
       {tab === 'directory' && <Directory closers={closers} onOpen={(id) => { setQueue([]); setOpenLead(id); }} />}
-      {tab === 'calendar' && <CalendarMonth closer={closer} onOpenLead={(id) => { setQueue([]); setOpenLead(id); }} />}
+      {tab === 'calendar' && buckets && (
+        <>
+          {buckets.overdue.length + buckets.dueToday.length > 0 && (
+            <button
+              onClick={startFollowUpQueue}
+              className="mb-4 w-full rounded-xl bg-navy py-3 text-sm font-bold text-white shadow-sm hover:bg-navydeep"
+            >
+              ▶ Work the follow-up queue — {buckets.overdue.length + buckets.dueToday.length} due
+              {buckets.overdue.length > 0 && ` (${buckets.overdue.length} overdue)`}
+              {closer !== 'All' ? ` · working as ${closer}` : ''}
+            </button>
+          )}
+          <CalendarMonth closer={closer} onOpenLead={(id) => { setQueue([]); setOpenLead(id); }} />
+        </>
+      )}
       {tab === 'eod' && <EodPanel />}
 
       {openLead != null && buckets && (
@@ -270,12 +278,23 @@ function FreshBucket({ leads, onOpen }: { leads: FreshLead[]; onOpen: (id: numbe
         <span className="eyebrow text-muted">New leads</span>
         <span className="ml-auto rounded-full bg-greensoft px-2 py-0.5 text-xs font-semibold text-greenink">{leads.length}</span>
       </div>
-      <p className="px-4 pb-2 text-[11px] text-faint">Open pool — first contact claims the lead</p>
-      {leads.length === 0 && <p className="px-4 pb-4 text-sm text-faint">No new leads waiting.</p>}
+      <p className="px-4 pb-2 text-[11px] text-faint">Open pool — first contact claims the lead. Follow-ups live on the Calendar.</p>
+      {leads.length === 0 && (
+        <p className="px-4 pb-4 text-sm text-faint">No new leads waiting — check the Calendar for follow-ups.</p>
+      )}
       <div className="max-h-[60vh] overflow-y-auto">
         {leads.map((l) => {
           const mins = waitingMinutes(l.dateSubmitted, l.timeSubmitted);
-          const hot = mins != null && mins <= 30;
+          // Speed-to-lead SLA: under 30m is good, under an hour is a warning,
+          // past an hour the lead has waited too long.
+          const timerTone =
+            mins == null
+              ? ''
+              : mins <= 30
+                ? 'bg-greensoft text-greenink'
+                : mins <= 60
+                  ? 'bg-ambersoft text-amberink'
+                  : 'bg-redsoft text-redink';
           return (
             <button
               key={l.id}
@@ -285,7 +304,7 @@ function FreshBucket({ leads, onOpen }: { leads: FreshLead[]; onOpen: (id: numbe
               <span className="flex items-baseline justify-between gap-2">
                 <span className="truncate text-sm font-semibold">{l.name}</span>
                 {mins != null && (
-                  <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-bold ${hot ? 'bg-greensoft text-greenink' : 'bg-redsoft text-redink'}`}>
+                  <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-bold ${timerTone}`}>
                     ⏱ {waitingLabel(mins)}
                   </span>
                 )}
@@ -297,55 +316,6 @@ function FreshBucket({ leads, onOpen }: { leads: FreshLead[]; onOpen: (id: numbe
             </button>
           );
         })}
-      </div>
-    </div>
-  );
-}
-
-const TONES: Record<string, { rail: string; dot: string; count: string }> = {
-  red: { rail: 'bg-red', dot: 'bg-red', count: 'bg-redsoft text-redink' },
-  amber: { rail: 'bg-amber', dot: 'bg-amber', count: 'bg-ambersoft text-amberink' },
-  blue: { rail: 'bg-blue', dot: 'bg-blue', count: 'bg-bluesoft text-blueink' },
-};
-
-function Bucket({
-  tone,
-  label,
-  leads,
-  onOpen,
-}: {
-  tone: keyof typeof TONES;
-  label: string;
-  leads: BucketLead[];
-  onOpen: (id: number) => void;
-}) {
-  const t = TONES[tone];
-  return (
-    <div className="card overflow-hidden">
-      <div className={`h-1 ${t.rail}`} />
-      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-        <span className={`h-2 w-2 rounded-full ${t.dot}`} />
-        <span className="eyebrow text-muted">{label}</span>
-        <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${t.count}`}>{leads.length}</span>
-      </div>
-      {leads.length === 0 && <p className="px-4 pb-4 text-sm text-faint">Nothing here — clear.</p>}
-      <div className="max-h-[60vh] overflow-y-auto">
-        {leads.map((l) => (
-          <button
-            key={l.id}
-            onClick={() => onOpen(l.id)}
-            className="block w-full border-t border-line px-4 py-2.5 text-left transition-colors hover:bg-bluesoft/50"
-          >
-            <span className="flex items-baseline justify-between gap-2">
-              <span className="truncate text-sm font-semibold">{l.name}</span>
-              <span className="shrink-0 text-xs text-faint">{l.date?.slice(5).replace('-', '/')}</span>
-            </span>
-            <span className="mt-1 flex items-center gap-2">
-              <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${statusChip(l.status)}`}>{l.status}</span>
-              {l.by && <span className="text-[11px] text-faint">{l.by}</span>}
-            </span>
-          </button>
-        ))}
       </div>
     </div>
   );
