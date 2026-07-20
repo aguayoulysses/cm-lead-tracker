@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, statusChip, suggestDate, CLOSED, type LeadDetail } from './api';
+import { api, statusChip, suggestDate, CLOSED, fmtMoney, type LeadDetail } from './api';
 
 const CHANNELS = ['Call', 'Text', 'Email', 'DM'];
 
@@ -9,14 +9,21 @@ export function LeadCard({
   leadId,
   actingCloser,
   today,
+  queuePos,
   onClose,
   onSaved,
+  onNext,
 }: {
   leadId: number;
   actingCloser: string;
   today: string;
+  /** position in the work queue, when cycling follow-ups */
+  queuePos?: { index: number; total: number };
   onClose: () => void;
+  /** called after a successful outcome save (parent advances the queue) */
   onSaved: () => void;
+  /** skip to the next lead without saving */
+  onNext?: () => void;
 }) {
   const [detail, setDetail] = useState<LeadDetail | null>(null);
   const [error, setError] = useState('');
@@ -31,8 +38,18 @@ export function LeadCard({
   const [callTaken, setCallTaken] = useState(false);
   const [qualified, setQualified] = useState('');
   const [note, setNote] = useState('');
+  const [oneTime, setOneTime] = useState('');
+  const [mrr, setMrr] = useState('');
+  const [cash, setCash] = useState('');
+
+  const [dealDraft, setDealDraft] = useState<{ oneTime: string; mrr: string; cash: string } | null>(null);
 
   useEffect(() => {
+    setDetail(null);
+    setError('');
+    setSaving(false);
+    setNote('');
+    setDealDraft(null);
     api<LeadDetail>(`/api/leads/${leadId}`)
       .then((d) => {
         setDetail(d);
@@ -40,6 +57,9 @@ export function LeadCard({
         setNextDate(suggestDate(d.lead.status, today));
         setApptDate(d.lead.apptDate ?? '');
         setApptTime(d.lead.apptTime ?? '');
+        setOneTime(d.lead.oneTimeValue ? String(d.lead.oneTimeValue) : '');
+        setMrr(d.lead.mrrValue ? String(d.lead.mrrValue) : '');
+        setCash(d.lead.cashCollected ? String(d.lead.cashCollected) : '');
       })
       .catch((e) => setError(e.message));
   }, [leadId, today]);
@@ -52,6 +72,10 @@ export function LeadCard({
   async function save() {
     if (!status) {
       setError('Pick an outcome first.');
+      return;
+    }
+    if (status === 'Closed Won' && (oneTime.trim() === '' || mrr.trim() === '')) {
+      setError('Closed Won needs One-Time Value and MRR Value — enter 0 if none.');
       return;
     }
     setSaving(true);
@@ -70,9 +94,36 @@ export function LeadCard({
           callTaken,
           pickedUp,
           actingCloser,
+          oneTimeValue: status === 'Closed Won' && oneTime.trim() !== '' ? Number(oneTime) : null,
+          mrrValue: status === 'Closed Won' && mrr.trim() !== '' ? Number(mrr) : null,
+          cashCollected: status === 'Closed Won' && cash.trim() !== '' ? Number(cash) : null,
         }),
       });
       onSaved();
+    } catch (e) {
+      setError((e as Error).message);
+      setSaving(false);
+    }
+  }
+
+  async function saveDeal() {
+    if (!dealDraft) return;
+    setSaving(true);
+    setError('');
+    try {
+      await api(`/api/leads/${leadId}/deal`, {
+        method: 'POST',
+        body: JSON.stringify({
+          oneTimeValue: Number(dealDraft.oneTime) || 0,
+          mrrValue: Number(dealDraft.mrr) || 0,
+          cashCollected: Number(dealDraft.cash) || 0,
+          actor: actingCloser,
+        }),
+      });
+      const d = await api<LeadDetail>(`/api/leads/${leadId}`);
+      setDetail(d);
+      setDealDraft(null);
+      setSaving(false);
     } catch (e) {
       setError((e as Error).message);
       setSaving(false);
@@ -93,7 +144,9 @@ export function LeadCard({
   }
 
   const isBooked = status === 'Booked';
+  const isWon = status === 'Closed Won';
   const isClosedStatus = CLOSED.includes(status);
+  const hasDeal = !!detail && (detail.lead.oneTimeValue > 0 || detail.lead.mrrValue > 0 || detail.lead.cashCollected > 0);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-navydeep/40" onClick={onClose}>
@@ -101,9 +154,26 @@ export function LeadCard({
         className="h-full w-full max-w-md overflow-y-auto border-l border-line bg-canvas p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <button onClick={onClose} className="mb-3 text-sm font-medium text-muted hover:text-navy">
-          &larr; Back to list
-        </button>
+        <div className="mb-3 flex items-center justify-between">
+          <button onClick={onClose} className="text-sm font-medium text-muted hover:text-navy">
+            &larr; Back
+          </button>
+          {queuePos && (
+            <span className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-muted">
+                Lead {queuePos.index + 1} of {queuePos.total}
+              </span>
+              {onNext && queuePos.index + 1 < queuePos.total && (
+                <button
+                  onClick={onNext}
+                  className="rounded-lg border border-line bg-white px-3 py-1 text-xs font-semibold text-blueink hover:bg-bluesoft"
+                >
+                  Skip &rarr;
+                </button>
+              )}
+            </span>
+          )}
+        </div>
 
         {!detail && !error && <p className="text-muted">Loading&hellip;</p>}
         {error && <p className="mb-3 rounded-lg bg-redsoft px-3 py-2 text-sm text-redink">{error}</p>}
@@ -153,6 +223,80 @@ export function LeadCard({
               </div>
             </div>
 
+            {(hasDeal || detail.lead.status === 'Closed Won') && (
+              <div className="card mt-3 border-green/40 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="eyebrow text-greenink">Deal</p>
+                  {!dealDraft && (
+                    <button
+                      onClick={() =>
+                        setDealDraft({
+                          oneTime: String(detail.lead.oneTimeValue || ''),
+                          mrr: String(detail.lead.mrrValue || ''),
+                          cash: String(detail.lead.cashCollected || ''),
+                        })
+                      }
+                      className="text-xs font-semibold text-blueink hover:underline"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {!dealDraft ? (
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-lg font-bold text-greenink">{fmtMoney(detail.lead.oneTimeValue)}</p>
+                      <p className="text-[11px] text-muted">One-time</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-greenink">{fmtMoney(detail.lead.mrrValue)}/mo</p>
+                      <p className="text-[11px] text-muted">MRR</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-greenink">{fmtMoney(detail.lead.cashCollected)}</p>
+                      <p className="text-[11px] text-muted">Cash collected</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      {(
+                        [
+                          ['oneTime', 'One-time $'],
+                          ['mrr', 'MRR $/mo'],
+                          ['cash', 'Cash $'],
+                        ] as const
+                      ).map(([k, label]) => (
+                        <div key={k}>
+                          <label className="text-[11px] font-medium text-muted">{label}</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={dealDraft[k]}
+                            onChange={(e) => setDealDraft((p) => ({ ...p!, [k]: e.target.value }))}
+                            className="field mt-1 px-2"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={saveDeal}
+                        disabled={saving}
+                        className="rounded-lg bg-green px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                      >
+                        Save deal
+                      </button>
+                      <button onClick={() => setDealDraft(null)} className="text-xs text-muted hover:text-ink">
+                        Cancel
+                      </button>
+                    </div>
+                    <p className="mt-1 text-[11px] text-faint">Every change is logged to the lead&rsquo;s history.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {(detail.attempts.length > 0 || detail.touches.length > 0) && (
               <div className="card mt-3 p-4">
                 <p className="eyebrow mb-2 text-muted">History</p>
@@ -201,6 +345,26 @@ export function LeadCard({
                 </div>
               )}
 
+              {isWon && (
+                <div className="mb-3 rounded-lg bg-greensoft p-3">
+                  <p className="mb-2 text-xs font-semibold text-greenink">Deal numbers (required — enter 0 if none)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-[11px] font-medium text-greenink">One-time $</label>
+                      <input type="number" min={0} value={oneTime} onChange={(e) => setOneTime(e.target.value)} className="field mt-1 px-2" />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-medium text-greenink">MRR $/mo</label>
+                      <input type="number" min={0} value={mrr} onChange={(e) => setMrr(e.target.value)} className="field mt-1 px-2" />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-medium text-greenink">Cash collected $</label>
+                      <input type="number" min={0} value={cash} onChange={(e) => setCash(e.target.value)} className="field mt-1 px-2" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="mb-3 grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-muted">Channel</label>
@@ -210,19 +374,34 @@ export function LeadCard({
                     ))}
                   </select>
                 </div>
-                {channel === 'Call' ? (
-                  <div>
-                    <label className="text-xs font-medium text-muted">Did they pick up?</label>
-                    <select
-                      value={pickedUp ? 'yes' : 'no'}
-                      onChange={(e) => setPickedUp(e.target.value === 'yes')}
-                      className="field mt-1"
-                    >
-                      <option value="yes">Picked up</option>
-                      <option value="no">No answer</option>
-                    </select>
-                  </div>
-                ) : (
+                <div>
+                  {channel === 'Call' ? (
+                    <>
+                      <label className="text-xs font-medium text-muted">Did they pick up?</label>
+                      <select
+                        value={pickedUp ? 'yes' : 'no'}
+                        onChange={(e) => setPickedUp(e.target.value === 'yes')}
+                        className="field mt-1"
+                      >
+                        <option value="yes">Picked up</option>
+                        <option value="no">No answer</option>
+                      </select>
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-xs font-medium text-muted">Qualified?</label>
+                      <select value={qualified} onChange={(e) => setQualified(e.target.value)} className="field mt-1">
+                        <option value="">Leave as is</option>
+                        <option>Yes</option>
+                        <option>No</option>
+                      </select>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {channel === 'Call' && (
+                <div className="mb-3 grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-muted">Qualified?</label>
                     <select value={qualified} onChange={(e) => setQualified(e.target.value)} className="field mt-1">
@@ -231,24 +410,18 @@ export function LeadCard({
                       <option>No</option>
                     </select>
                   </div>
-                )}
-              </div>
-
-              {channel === 'Call' && (
-                <div className="mb-3">
-                  <label className="text-xs font-medium text-muted">Qualified?</label>
-                  <select value={qualified} onChange={(e) => setQualified(e.target.value)} className="field mt-1">
-                    <option value="">Leave as is</option>
-                    <option>Yes</option>
-                    <option>No</option>
-                  </select>
+                  <label className="flex items-end gap-2 pb-2 text-sm">
+                    <input type="checkbox" checked={callTaken} onChange={(e) => setCallTaken(e.target.checked)} className="accent-navy" />
+                    Sales call taken
+                  </label>
                 </div>
               )}
-
-              <label className="mb-3 flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={callTaken} onChange={(e) => setCallTaken(e.target.checked)} className="accent-navy" />
-                Sales call taken (counts for KPIs)
-              </label>
+              {channel !== 'Call' && (
+                <label className="mb-3 flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={callTaken} onChange={(e) => setCallTaken(e.target.checked)} className="accent-navy" />
+                  Sales call taken (counts for KPIs)
+                </label>
+              )}
 
               <label className="text-xs font-medium text-muted">Note (optional)</label>
               <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="field mt-1 mb-3" />
@@ -258,7 +431,7 @@ export function LeadCard({
                 disabled={saving}
                 className="w-full rounded-lg bg-navy py-2.5 text-sm font-semibold text-white hover:bg-navydeep disabled:opacity-50"
               >
-                {saving ? 'Saving…' : 'Save outcome'}
+                {saving ? 'Saving…' : queuePos && queuePos.index + 1 < queuePos.total ? 'Save & next lead →' : 'Save outcome'}
               </button>
               <button
                 onClick={extraTouch}

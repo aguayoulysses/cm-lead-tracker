@@ -1,19 +1,47 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { api, statusChip, type Buckets, type BucketLead } from '@/components/api';
+import { api, statusChip, fmtMoney, type Buckets, type BucketLead } from '@/components/api';
 import { LeadCard } from '@/components/lead-card';
 import { CalendarMonth } from '@/components/calendar-month';
 import { EodPanel } from '@/components/eod-panel';
 
-type Tab = 'list' | 'calendar' | 'eod';
+type Tab = 'list' | 'directory' | 'calendar' | 'eod';
+
+interface LeaderRow {
+  closer: string;
+  won: number;
+  contractValue: number;
+  cashCollected: number;
+  dials: number;
+  callsTaken: number;
+}
+
+interface DirectoryLead {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  status: string;
+  contactedBy: string;
+  dateSubmitted: string | null;
+  followUpDate: string | null;
+  followUpNeeded: boolean;
+  oneTimeValue: number;
+  mrrValue: number;
+  cashCollected: number;
+  dateClosed: string | null;
+  adSetName: string;
+}
 
 export default function WorkPage() {
   const [closers, setClosers] = useState<string[]>([]);
   const [closer, setCloser] = useState('All');
   const [tab, setTab] = useState<Tab>('list');
   const [buckets, setBuckets] = useState<Buckets | null>(null);
+  const [leaders, setLeaders] = useState<LeaderRow[]>([]);
   const [openLead, setOpenLead] = useState<number | null>(null);
+  const [queue, setQueue] = useState<number[]>([]);
   const [showNewLead, setShowNewLead] = useState(false);
 
   useEffect(() => {
@@ -25,7 +53,11 @@ export default function WorkPage() {
   }, []);
 
   const loadBuckets = useCallback(() => {
-    api<Buckets>(`/api/leads?view=buckets&closer=${encodeURIComponent(closer)}`).then(setBuckets);
+    api<Buckets>(`/api/leads?view=buckets&closer=${encodeURIComponent(closer)}`).then((b) => {
+      setBuckets(b);
+      const monthStart = `${b.today.slice(0, 7)}-01`;
+      api<LeaderRow[]>(`/api/stats/by-closer?from=${monthStart}&to=${b.today}`).then(setLeaders);
+    });
   }, [closer]);
 
   useEffect(loadBuckets, [loadBuckets]);
@@ -35,6 +67,28 @@ export default function WorkPage() {
     localStorage.setItem('cmCloser', c);
   }
 
+  /** Open a lead as part of the work queue (overdue first, then due today). */
+  function openFromBuckets(id: number) {
+    if (!buckets) return;
+    const q = [...buckets.overdue, ...buckets.dueToday].map((l) => l.id);
+    setQueue(q.includes(id) ? q : []);
+    setOpenLead(id);
+  }
+
+  function advanceQueue(saved: boolean) {
+    loadBuckets();
+    if (queue.length && openLead != null) {
+      const i = queue.indexOf(openLead);
+      if (i >= 0 && i + 1 < queue.length) {
+        setOpenLead(queue[i + 1]);
+        return;
+      }
+    }
+    setOpenLead(null);
+    if (saved && queue.length) setQueue([]);
+  }
+
+  const queueIndex = openLead != null ? queue.indexOf(openLead) : -1;
   const todayLabel = buckets
     ? new Date(`${buckets.today}T12:00:00`).toLocaleDateString('en-US', {
         weekday: 'long',
@@ -45,7 +99,7 @@ export default function WorkPage() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center gap-4">
+      <div className="mb-4 flex flex-wrap items-center gap-4">
         <div className="flex overflow-hidden rounded-lg border border-line bg-card">
           {closers.map((c) => (
             <button
@@ -65,6 +119,7 @@ export default function WorkPage() {
             {(
               [
                 ['list', 'Follow-Ups'],
+                ['directory', 'All Leads'],
                 ['calendar', 'Calendar'],
                 ['eod', 'End of Day'],
               ] as [Tab, string][]
@@ -89,15 +144,29 @@ export default function WorkPage() {
         </div>
       </div>
 
+      {leaders.length > 0 && tab !== 'eod' && <Leaderboard rows={leaders} />}
+
       {tab === 'list' && buckets && (
-        <div className="grid items-start gap-5 md:grid-cols-3">
-          <Bucket tone="red" label="Overdue" leads={buckets.overdue} onOpen={setOpenLead} />
-          <Bucket tone="amber" label="Due today" leads={buckets.dueToday} onOpen={setOpenLead} />
-          <Bucket tone="blue" label="Next 7 days" leads={buckets.next7} onOpen={setOpenLead} />
-        </div>
+        <>
+          {(buckets.overdue.length > 0 || buckets.dueToday.length > 0) && (
+            <button
+              onClick={() => openFromBuckets([...buckets.overdue, ...buckets.dueToday][0].id)}
+              className="mb-4 w-full rounded-xl bg-navy py-3 text-sm font-bold text-white shadow-sm hover:bg-navydeep"
+            >
+              ▶ Work the queue — {buckets.overdue.length + buckets.dueToday.length} leads due
+              {closer !== 'All' ? ` for ${closer}` : ''}
+            </button>
+          )}
+          <div className="grid items-start gap-5 md:grid-cols-3">
+            <Bucket tone="red" label="Overdue" leads={buckets.overdue} onOpen={openFromBuckets} />
+            <Bucket tone="amber" label="Due today" leads={buckets.dueToday} onOpen={openFromBuckets} />
+            <Bucket tone="blue" label="Next 7 days" leads={buckets.next7} onOpen={(id) => { setQueue([]); setOpenLead(id); }} />
+          </div>
+        </>
       )}
 
-      {tab === 'calendar' && <CalendarMonth closer={closer} onOpenLead={setOpenLead} />}
+      {tab === 'directory' && <Directory closers={closers} onOpen={(id) => { setQueue([]); setOpenLead(id); }} />}
+      {tab === 'calendar' && <CalendarMonth closer={closer} onOpenLead={(id) => { setQueue([]); setOpenLead(id); }} />}
       {tab === 'eod' && <EodPanel />}
 
       {openLead != null && buckets && (
@@ -105,11 +174,10 @@ export default function WorkPage() {
           leadId={openLead}
           actingCloser={closer}
           today={buckets.today}
-          onClose={() => setOpenLead(null)}
-          onSaved={() => {
-            setOpenLead(null);
-            loadBuckets();
-          }}
+          queuePos={queueIndex >= 0 ? { index: queueIndex, total: queue.length } : undefined}
+          onClose={() => { setOpenLead(null); setQueue([]); loadBuckets(); }}
+          onSaved={() => advanceQueue(true)}
+          onNext={queueIndex >= 0 ? () => advanceQueue(false) : undefined}
         />
       )}
 
@@ -122,6 +190,35 @@ export default function WorkPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function Leaderboard({ rows }: { rows: LeaderRow[] }) {
+  const top = Math.max(...rows.map((r) => r.contractValue), 1);
+  const medals = ['bg-amber text-white', 'bg-faint text-white', 'bg-[#b08d57] text-white'];
+  return (
+    <div className="card mb-5 overflow-hidden">
+      <p className="eyebrow border-b border-line px-4 py-2.5 text-muted">This month&rsquo;s board</p>
+      <div className="grid divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {rows.slice(0, 3).map((r, i) => (
+          <div key={r.closer} className="px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${medals[i] ?? 'bg-canvas text-muted'}`}>
+                {i + 1}
+              </span>
+              <span className="text-sm font-bold">{r.closer}</span>
+              <span className="ml-auto text-lg font-bold text-navydeep">{fmtMoney(r.contractValue)}</span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas">
+              <div className="h-full rounded-full bg-blue" style={{ width: `${Math.max((r.contractValue / top) * 100, 3)}%` }} />
+            </div>
+            <p className="mt-1.5 text-xs text-muted">
+              {r.won} won &middot; {r.callsTaken} calls &middot; {r.dials} dials &middot; {fmtMoney(r.cashCollected)} cash
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -153,7 +250,7 @@ function Bucket({
         <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${t.count}`}>{leads.length}</span>
       </div>
       {leads.length === 0 && <p className="px-4 pb-4 text-sm text-faint">Nothing here — clear.</p>}
-      <div className="max-h-[65vh] overflow-y-auto">
+      <div className="max-h-[60vh] overflow-y-auto">
         {leads.map((l) => (
           <button
             key={l.id}
@@ -170,6 +267,100 @@ function Bucket({
             </span>
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function Directory({ closers, onOpen }: { closers: string[]; onOpen: (id: number) => void }) {
+  const [all, setAll] = useState<DirectoryLead[]>([]);
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState('All');
+  const [who, setWho] = useState('All');
+
+  useEffect(() => {
+    api<{ leads: DirectoryLead[] }>('/api/leads?view=all').then((d) => setAll(d.leads));
+  }, []);
+
+  const statuses = ['All', ...new Set(all.map((l) => l.status))];
+  const filtered = all.filter((l) => {
+    if (status !== 'All' && l.status !== status) return false;
+    if (who !== 'All' && l.contactedBy !== who) return false;
+    if (q) {
+      const s = q.toLowerCase();
+      if (!l.name.toLowerCase().includes(s) && !l.phone.includes(q) && !l.email.toLowerCase().includes(s)) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
+        <input
+          placeholder="Search name, phone, email…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="field max-w-64"
+        />
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="field max-w-44">
+          {statuses.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
+        <select value={who} onChange={(e) => setWho(e.target.value)} className="field max-w-36">
+          {closers.map((c) => (
+            <option key={c}>{c}</option>
+          ))}
+        </select>
+        <span className="ml-auto text-xs text-faint">
+          {filtered.length} of {all.length} leads
+        </span>
+      </div>
+      <div className="max-h-[65vh] overflow-y-auto">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 bg-card">
+            <tr className="border-b border-line text-left text-xs font-semibold text-muted">
+              <th className="px-4 py-2">Lead</th>
+              <th className="px-4 py-2">Status</th>
+              <th className="px-4 py-2">Closer</th>
+              <th className="px-4 py-2">Submitted</th>
+              <th className="px-4 py-2 text-right">One-time</th>
+              <th className="px-4 py-2 text-right">MRR</th>
+              <th className="px-4 py-2 text-right">Cash</th>
+              <th className="px-4 py-2">Next follow-up</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((l) => (
+              <tr
+                key={l.id}
+                onClick={() => onOpen(l.id)}
+                className="cursor-pointer border-b border-line last:border-b-0 hover:bg-bluesoft/40"
+              >
+                <td className="px-4 py-2">
+                  <span className="font-semibold">{l.name}</span>
+                  <span className="block text-xs text-faint">{l.phone}</span>
+                </td>
+                <td className="px-4 py-2">
+                  <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${statusChip(l.status)}`}>{l.status}</span>
+                </td>
+                <td className="px-4 py-2 text-muted">{l.contactedBy || '—'}</td>
+                <td className="px-4 py-2 text-muted">{l.dateSubmitted ?? '—'}</td>
+                <td className="px-4 py-2 text-right">{l.oneTimeValue ? fmtMoney(l.oneTimeValue) : '—'}</td>
+                <td className="px-4 py-2 text-right">{l.mrrValue ? fmtMoney(l.mrrValue) : '—'}</td>
+                <td className="px-4 py-2 text-right">{l.cashCollected ? fmtMoney(l.cashCollected) : '—'}</td>
+                <td className="px-4 py-2 text-muted">{l.followUpNeeded ? (l.followUpDate ?? '—') : '—'}</td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-4 text-faint">
+                  No leads match.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

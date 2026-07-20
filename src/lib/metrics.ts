@@ -135,7 +135,10 @@ export async function scorecard(f: StatsFilter) {
   };
 }
 
-/** Dashboard BY CLOSER table: worked / appts / won / revenue. */
+/**
+ * Leaderboard: per closer, lead outcomes plus activity (dials/pickups/calls
+ * taken from the KPI log). Optional date range; contract value ranks it.
+ */
 export async function byCloser(range?: { from: string; to: string }) {
   const dateCond = range
     ? [isNotNull(leads.dateSubmitted), gte(leads.dateSubmitted, range.from), lte(leads.dateSubmitted, range.to)]
@@ -146,12 +149,48 @@ export async function byCloser(range?: { from: string; to: string }) {
       worked: sql<number>`count(*)`,
       appts: sql<number>`sum(case when ${leads.apptSet} then 1 else 0 end)`,
       won: sql<number>`sum(case when ${leads.status} = 'Closed Won' then 1 else 0 end)`,
-      revenue: sql<number>`coalesce(sum(${leads.oneTimeValue}), 0) + coalesce(sum(${leads.mrrValue}), 0)`,
+      oneTime: sql<number>`coalesce(sum(case when ${leads.status} = 'Closed Won' then ${leads.oneTimeValue} else 0 end), 0)`,
+      mrr: sql<number>`coalesce(sum(case when ${leads.status} = 'Closed Won' then ${leads.mrrValue} else 0 end), 0)`,
+      cash: sql<number>`coalesce(sum(${leads.cashCollected}), 0)`,
     })
     .from(leads)
     .where(and(ne(leads.contactedBy, ''), ...dateCond))
     .groupBy(leads.contactedBy);
-  return rows.sort((a, b) => b.worked - a.worked);
+
+  const kpiCond = range ? [gte(kpiLog.date, range.from), lte(kpiLog.date, range.to)] : [];
+  const activity = await db
+    .select({
+      closer: kpiLog.closer,
+      dials: sql<number>`coalesce(sum(${kpiLog.dials}), 0)`,
+      pickups: sql<number>`coalesce(sum(${kpiLog.pickups}), 0)`,
+      callsTaken: sql<number>`coalesce(sum(${kpiLog.salesCallsTaken}), 0)`,
+    })
+    .from(kpiLog)
+    .where(and(ne(kpiLog.closer, ''), ...kpiCond))
+    .groupBy(kpiLog.closer);
+  const actMap = new Map(activity.map((a) => [a.closer, a]));
+
+  const names = new Set([...rows.map((r) => r.closer), ...activity.map((a) => a.closer)]);
+  return [...names]
+    .map((name) => {
+      const r = rows.find((x) => x.closer === name);
+      const a = actMap.get(name);
+      const oneTime = r?.oneTime ?? 0;
+      const mrr = r?.mrr ?? 0;
+      return {
+        closer: name,
+        worked: r?.worked ?? 0,
+        appts: r?.appts ?? 0,
+        won: r?.won ?? 0,
+        revenue: oneTime + mrr,
+        contractValue: oneTime + 12 * mrr,
+        cashCollected: r?.cash ?? 0,
+        dials: a?.dials ?? 0,
+        pickups: a?.pickups ?? 0,
+        callsTaken: a?.callsTaken ?? 0,
+      };
+    })
+    .sort((a, b) => b.contractValue - a.contractValue || b.won - a.won || b.dials - a.dials);
 }
 
 /** Performance BY AD SET ROAS: annualized ROAS = (1x + 12*MRR) / spend. */

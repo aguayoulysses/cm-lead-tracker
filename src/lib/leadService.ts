@@ -158,6 +158,40 @@ export async function createLead(input: NewLeadInput) {
   return inserted[0].id;
 }
 
+/** Update the deal numbers on any lead, logged as a touch for the paper trail. */
+export async function updateDeal(
+  leadId: number,
+  deal: { oneTimeValue: number; mrrValue: number; cashCollected: number },
+  actor?: string,
+) {
+  const lead = await getLeadOrThrow(leadId);
+  const now = nowInTz();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(leads)
+      .set({
+        oneTimeValue: deal.oneTimeValue,
+        mrrValue: deal.mrrValue,
+        cashCollected: deal.cashCollected,
+        updatedAt: now,
+      })
+      .where(eq(leads.id, leadId));
+    await tx.insert(touches).values({
+      leadId,
+      leadNameSnapshot: `${lead.firstName} ${lead.lastName}`.trim(),
+      phoneSnapshot: lead.phone,
+      at: now,
+      what: 'Deal updated',
+      by: actor && actor !== 'All' ? actor : lead.contactedBy,
+      nextFollowUp: lead.followUpDate,
+      note: `1x $${deal.oneTimeValue} · MRR $${deal.mrrValue}/mo · cash collected $${deal.cashCollected}`,
+      channel: '',
+      createdAt: now,
+    });
+  });
+  return getLeadOrThrow(leadId);
+}
+
 /** Lead card payload: lead + attempts + recent touches. */
 export async function getLeadCard(leadId: number) {
   const lead = await getLeadOrThrow(leadId);

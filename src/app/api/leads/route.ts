@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
 import { leads } from '@/db/schema';
@@ -9,6 +9,36 @@ import { createLead } from '@/lib/leadService';
 
 export async function GET(req: NextRequest) {
   const closer = req.nextUrl.searchParams.get('closer') || 'All';
+  const view = req.nextUrl.searchParams.get('view') || 'buckets';
+
+  // Directory: every lead regardless of follow-up state, newest first.
+  if (view === 'all') {
+    const rows = await db
+      .select({
+        id: leads.id,
+        firstName: leads.firstName,
+        lastName: leads.lastName,
+        phone: leads.phone,
+        email: leads.email,
+        status: leads.status,
+        contactedBy: leads.contactedBy,
+        dateSubmitted: leads.dateSubmitted,
+        followUpDate: leads.followUpDate,
+        followUpNeeded: leads.followUpNeeded,
+        oneTimeValue: leads.oneTimeValue,
+        mrrValue: leads.mrrValue,
+        cashCollected: leads.cashCollected,
+        dateClosed: leads.dateClosed,
+        adSetName: leads.adSetName,
+      })
+      .from(leads)
+      .orderBy(desc(leads.dateSubmitted), desc(leads.id))
+      .limit(1000);
+    return NextResponse.json({
+      today: todayInTz(),
+      leads: rows.map((l) => ({ ...l, name: `${l.firstName} ${l.lastName}`.trim() })),
+    });
+  }
   const rows = await db
     .select({
       id: leads.id,

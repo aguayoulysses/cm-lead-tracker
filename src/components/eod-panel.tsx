@@ -72,7 +72,7 @@ export function EodPanel() {
                   <input
                     type="number"
                     min={0}
-                    className="field w-16 text-center"
+                    className="field max-w-16 text-center"
                     value={drafts[r.closer]?.noShows ?? (r.noShows != null ? String(r.noShows) : '')}
                     onChange={(e) =>
                       setDrafts((p) => ({
@@ -89,7 +89,7 @@ export function EodPanel() {
                   <input
                     type="number"
                     min={0}
-                    className="field w-16 text-center"
+                    className="field max-w-16 text-center"
                     value={drafts[r.closer]?.reschedules ?? (r.reschedules != null ? String(r.reschedules) : '')}
                     onChange={(e) =>
                       setDrafts((p) => ({

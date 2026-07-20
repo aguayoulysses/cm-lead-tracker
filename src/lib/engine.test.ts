@@ -28,6 +28,9 @@ function lead(overrides: Partial<LeadState> = {}): LeadState {
     followUpDate: TODAY,
     dateClosed: null,
     qualified: null,
+    oneTimeValue: 0,
+    mrrValue: 0,
+    cashCollected: 0,
     ...overrides,
   };
 }
@@ -80,13 +83,34 @@ describe('applyStatus', () => {
   });
 
   it('clears follow-up and stamps dateClosed on closed statuses', () => {
-    const { patch } = applyStatus(lead(), { status: 'Closed Won' }, NOW, TODAY);
+    const { patch } = applyStatus(lead(), { status: 'Closed Won', oneTimeValue: 5000, mrrValue: 1500 }, NOW, TODAY);
     expect(patch.followUpNeeded).toBe(false);
     expect(patch.followUpDate).toBeNull();
     expect(patch.dateClosed).toBe(TODAY);
     const { patch: p2 } = applyStatus(lead(), { status: 'Not Interested' }, NOW, TODAY);
     expect(p2.dateClosed).toBeUndefined();
     expect(p2.followUpNeeded).toBe(false);
+  });
+
+  it('Closed Won requires deal values unless the lead already has them', () => {
+    expect(() => applyStatus(lead(), { status: 'Closed Won' }, NOW, TODAY)).toThrow(
+      'Closed Won needs One-Time Value and MRR Value',
+    );
+    expect(() => applyStatus(lead(), { status: 'Closed Won', oneTimeValue: 5000 }, NOW, TODAY)).toThrow();
+    const { patch } = applyStatus(
+      lead(),
+      { status: 'Closed Won', oneTimeValue: 5000, mrrValue: 0, cashCollected: 2500 },
+      NOW,
+      TODAY,
+    );
+    expect(patch.oneTimeValue).toBe(5000);
+    expect(patch.mrrValue).toBe(0);
+    expect(patch.cashCollected).toBe(2500);
+    // Re-saving a lead that already has a deal doesn't demand re-entry:
+    const rewon = lead({ oneTimeValue: 5000, mrrValue: 1500 });
+    expect(() => applyStatus(rewon, { status: 'Closed Won' }, NOW, TODAY)).not.toThrow();
+    // Closed Lost never asks for money:
+    expect(() => applyStatus(lead(), { status: 'Closed Lost' }, NOW, TODAY)).not.toThrow();
   });
 
   it('Booked requires appt date AND time', () => {
@@ -112,13 +136,13 @@ describe('applyStatus', () => {
     expect(applyStatus(lead(), { status: 'Contacted', qualified: '' }, NOW, TODAY).patch.qualified).toBeUndefined();
   });
 
-  it('auto-assigns the acting closer on unowned leads for KPI-worthy outcomes', () => {
+  it('auto-claims the acting closer on any first outcome for unowned leads', () => {
     const { patch, touch } = applyStatus(lead(), { status: 'Contacted', channel: 'Call', actingCloser: 'Jack' }, NOW, TODAY);
     expect(patch.contactedBy).toBe('Jack');
     expect(touch.by).toBe('Jack');
-    // Not for Text without callTaken:
+    // Text also claims now (broadened from the sheet's Call-only rule):
     const r2 = applyStatus(lead(), { status: 'Contacted', channel: 'Text', actingCloser: 'Jack' }, NOW, TODAY);
-    expect(r2.patch.contactedBy).toBeUndefined();
+    expect(r2.patch.contactedBy).toBe('Jack');
     // Never overwrites an owner:
     const r3 = applyStatus(lead({ contactedBy: 'Cody' }), { status: 'Contacted', channel: 'Call', actingCloser: 'Jack' }, NOW, TODAY);
     expect(r3.patch.contactedBy).toBeUndefined();

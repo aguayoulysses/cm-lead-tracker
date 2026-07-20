@@ -14,6 +14,9 @@ const outcomeSchema = z.object({
   callTaken: z.boolean().optional(),
   pickedUp: z.boolean().optional(),
   actingCloser: z.string().optional(),
+  oneTimeValue: z.number().min(0).nullable().optional(),
+  mrrValue: z.number().min(0).nullable().optional(),
+  cashCollected: z.number().min(0).nullable().optional(),
 });
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {

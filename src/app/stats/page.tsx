@@ -35,6 +35,11 @@ interface CloserRow {
   appts: number;
   won: number;
   revenue: number;
+  contractValue: number;
+  cashCollected: number;
+  dials: number;
+  pickups: number;
+  callsTaken: number;
 }
 
 interface RoasRow {
@@ -80,7 +85,8 @@ export default function StatsPage() {
       if (!from) setFrom(d.from);
       if (!to) setTo(d.to);
     });
-    api<CloserRow[]>('/api/stats/by-closer').then(setByCloser);
+    const cq = from && to ? `?from=${from}&to=${to}` : '';
+    api<CloserRow[]>(`/api/stats/by-closer${cq}`).then(setByCloser);
     api<RoasRow[]>('/api/stats/roas').then(setRoas);
   }, [closer, from, to]);
 
@@ -115,7 +121,7 @@ export default function StatsPage() {
       <div className="mb-6 flex flex-wrap items-end gap-3">
         <div>
           <label className="text-xs font-medium text-muted">Closer</label>
-          <select value={closer} onChange={(e) => setCloser(e.target.value)} className="field mt-1 w-36">
+          <select value={closer} onChange={(e) => setCloser(e.target.value)} className="field mt-1 max-w-36">
             {closers.map((c) => (
               <option key={c}>{c}</option>
             ))}
@@ -131,6 +137,43 @@ export default function StatsPage() {
         </div>
         <span className="pb-2 text-xs text-faint">Defaults to month-to-date</span>
       </div>
+
+      {byCloser.length > 0 && (
+        <div className="card mb-5 overflow-hidden">
+          <p className="eyebrow border-b border-line px-4 py-3 text-muted">
+            Leaderboard &middot; ranked by contract value (1x + 12&times;MRR) in range
+          </p>
+          {byCloser.map((r, i) => {
+            const top = Math.max(...byCloser.map((x) => x.contractValue), 1);
+            const medal =
+              i === 0 ? 'bg-amber text-white' : i === 1 ? 'bg-faint text-white' : i === 2 ? 'bg-[#b08d57] text-white' : 'bg-canvas text-muted';
+            return (
+              <div key={r.closer} className="flex items-center gap-4 border-b border-line px-4 py-3 last:border-b-0">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${medal}`}>
+                  {i + 1}
+                </span>
+                <div className="w-24 shrink-0">
+                  <p className="text-sm font-bold">{r.closer}</p>
+                  <p className="text-[11px] text-faint">{r.worked} leads</p>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="h-2 overflow-hidden rounded-full bg-canvas">
+                    <div className="h-full rounded-full bg-blue" style={{ width: `${Math.max((r.contractValue / top) * 100, 2)}%` }} />
+                  </div>
+                  <p className="mt-1 text-xs text-muted">
+                    {r.dials} dials &middot; {r.pickups} pickups &middot; {r.callsTaken} calls taken &middot; {r.appts} appts &middot;{' '}
+                    {r.won} won
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-xl font-bold text-navydeep">{fmtMoney(r.contractValue)}</p>
+                  <p className="text-[11px] text-muted">{fmtMoney(r.cashCollected)} cash collected</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {card && F && M && R && (
         <>
@@ -165,39 +208,6 @@ export default function StatsPage() {
       )}
 
       <div className="card mt-6 overflow-hidden">
-        <p className="eyebrow border-b border-line px-4 py-3 text-muted">By closer &middot; all time</p>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-line text-left text-xs font-semibold text-muted">
-              <th className="px-4 py-2">Closer</th>
-              <th className="px-4 py-2 text-right">Worked</th>
-              <th className="px-4 py-2 text-right">Appts</th>
-              <th className="px-4 py-2 text-right">Won</th>
-              <th className="px-4 py-2 text-right">Rev (1x + MRR)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {byCloser.map((r) => (
-              <tr key={r.closer} className="border-b border-line last:border-b-0">
-                <td className="px-4 py-2.5 font-semibold">{r.closer}</td>
-                <td className="px-4 py-2.5 text-right">{r.worked}</td>
-                <td className="px-4 py-2.5 text-right">{r.appts}</td>
-                <td className="px-4 py-2.5 text-right">{r.won}</td>
-                <td className="px-4 py-2.5 text-right font-semibold">{fmtMoney(r.revenue)}</td>
-              </tr>
-            ))}
-            {byCloser.length === 0 && (
-              <tr>
-                <td className="px-4 py-3 text-faint" colSpan={5}>
-                  No owned leads yet
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="card mt-6 overflow-hidden">
         <p className="eyebrow border-b border-line px-4 py-3 text-muted">
           By ad set &middot; type spend, press Enter to save &middot; ROAS = (1x + 12&times;MRR) / spend
         </p>
@@ -228,7 +238,7 @@ export default function StatsPage() {
                     <td className="max-w-48 truncate px-4 py-2.5 text-xs text-faint">{r.campaignName}</td>
                     <td className="px-4 py-2.5 text-right">
                       <input
-                        className="field w-24 border-amber/50 bg-ambersoft/60 text-right"
+                        className="field max-w-24 border-amber/50 bg-ambersoft/60 text-right"
                         value={spendDrafts[r.adSetName] ?? (r.spend ? String(r.spend) : '')}
                         placeholder="$0"
                         onChange={(e) => setSpendDrafts((p) => ({ ...p, [r.adSetName]: e.target.value }))}

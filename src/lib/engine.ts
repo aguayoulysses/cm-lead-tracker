@@ -34,6 +34,9 @@ export interface LeadState {
   followUpDate: string | null;
   dateClosed: string | null;
   qualified: string | null;
+  oneTimeValue: number;
+  mrrValue: number;
+  cashCollected: number;
 }
 
 export interface OutcomeInput {
@@ -47,6 +50,9 @@ export interface OutcomeInput {
   callTaken?: boolean;
   pickedUp?: boolean;
   actingCloser?: string; // panel's "me" closer for auto-assign
+  oneTimeValue?: number | null; // required (with mrrValue) when status is Closed Won
+  mrrValue?: number | null;
+  cashCollected?: number | null;
 }
 
 export interface LeadPatch {
@@ -62,6 +68,9 @@ export interface LeadPatch {
   followUpDate: string | null;
   dateClosed?: string;
   qualified?: string;
+  oneTimeValue?: number;
+  mrrValue?: number;
+  cashCollected?: number;
 }
 
 export interface TouchRecord {
@@ -144,15 +153,29 @@ export function applyStatus(
     patch.dateClosed = today;
   }
 
+  // Closed Won requires the deal numbers — stats starve without them.
+  if (status === 'Closed Won') {
+    const ot = input.oneTimeValue ?? null;
+    const mr = input.mrrValue ?? null;
+    const alreadyHasDeal = lead.oneTimeValue > 0 || lead.mrrValue > 0;
+    if ((ot == null || Number.isNaN(ot) || mr == null || Number.isNaN(mr)) && !alreadyHasDeal) {
+      throw new EngineValidationError('Closed Won needs One-Time Value and MRR Value — enter 0 if none.');
+    }
+    if (ot != null && !Number.isNaN(ot)) patch.oneTimeValue = ot;
+    if (mr != null && !Number.isNaN(mr)) patch.mrrValue = mr;
+    if (input.cashCollected != null && !Number.isNaN(input.cashCollected)) {
+      patch.cashCollected = input.cashCollected;
+    }
+  }
+
   if (input.qualified === 'Yes' || input.qualified === 'No') {
     patch.qualified = input.qualified;
   }
 
-  // Auto-assign the acting closer to an unowned lead when a KPI-worthy
-  // outcome is logged (panelSave line 646-649).
-  const isCall = input.channel === 'Call';
+  // Auto-claim: whoever logs the first outcome on an unowned lead becomes its
+  // closer (broadened from the sheet, which only claimed on Call outcomes).
   let by = lead.contactedBy;
-  if ((input.callTaken || isCall) && !by && input.actingCloser && input.actingCloser !== 'All') {
+  if (!by && input.actingCloser && input.actingCloser !== 'All') {
     patch.contactedBy = input.actingCloser;
     by = input.actingCloser;
   }
