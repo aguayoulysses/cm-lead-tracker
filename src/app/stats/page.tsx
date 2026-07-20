@@ -213,7 +213,7 @@ export default function StatsPage() {
       {card && F && M && R && (
         <>
           <div className="mb-5 grid gap-4 sm:grid-cols-3">
-            <RateTile label="Connect rate" sub="pickups / dials" value={fmtPct(R.connect)} />
+            <RateTile label="Cash collected" sub="in selected range" value={fmtMoney(M.cashCollected)} />
             <RateTile label="Show-up rate" sub="taken / on calendar" value={fmtPct(R.showUp)} />
             <RateTile label="Close rate" sub="closed / taken" value={fmtPct(R.close)} />
           </div>
