@@ -66,6 +66,7 @@ export async function scorecard(f: StatsFilter) {
   const totalLeads = await countLeads(leads.dateSubmitted);
   const callsOnCalendar = await countLeads(leads.apptDate);
   const closedDeals = await countLeads(leads.dateClosed, [eq(leads.status, 'Closed Won')]);
+  const disqualified = await countLeads(leads.dateClosed, [eq(leads.status, 'Disqualified')]);
 
   // Money: sums over Closed Won by Date Closed in range.
   const moneyWhere = and(
@@ -123,6 +124,7 @@ export async function scorecard(f: StatsFilter) {
       noShows: k.noShows,
       reschedules: k.reschedules,
       closedDeals,
+      disqualified,
     },
     money: {
       newMrrClients: m.mrrClients ?? 0,

@@ -14,7 +14,7 @@ export const FOLLOWUP_DAYS: Record<string, number> = {
 };
 export const DEFAULT_FOLLOWUP_DAYS = 3;
 
-export const CLOSED_STATUSES = ['Closed Won', 'Closed Lost', 'Not Interested', 'Bad Number'];
+export const CLOSED_STATUSES = ['Closed Won', 'Closed Lost', 'Not Interested', 'Bad Number', 'Disqualified'];
 
 /**
  * Statuses that imply the lead actually engaged (a conversation happened).
@@ -163,9 +163,14 @@ export function applyStatus(
     patch.followUpDate = nextDateStr ?? suggestFollowUpDate(status, today);
   }
 
-  // Sheet stamps (overwrites) Date Closed on every won/lost save.
-  if (status === 'Closed Won' || status === 'Closed Lost') {
+  // Terminal outcomes stamp the close date (drives date-ranged stats).
+  if (status === 'Closed Won' || status === 'Closed Lost' || status === 'Disqualified') {
     patch.dateClosed = today;
+  }
+
+  // A DQ is by definition not qualified.
+  if (status === 'Disqualified') {
+    patch.qualified = 'No';
   }
 
   // Closed Won requires the deal numbers — stats starve without them.

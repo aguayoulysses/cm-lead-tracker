@@ -160,13 +160,13 @@ export async function createLead(input: NewLeadInput) {
   return inserted[0].id;
 }
 
-/** Appointment no-show: KPI no-show for the closer, chase again tomorrow. */
-export async function logNoShow(leadId: number, actor?: string) {
+/** Appointment no-show: KPI no-show for the closer, note + chase date configurable. */
+export async function logNoShow(leadId: number, actor?: string, note?: string, followUpDate?: string | null) {
   const lead = await getLeadOrThrow(leadId);
   const now = nowInTz();
   const today = todayInTz();
   const by = actor && actor !== 'All' ? actor : lead.contactedBy;
-  const nextDate = addDays(today, 1);
+  const nextDate = followUpDate || addDays(today, 1);
   await db.transaction(async (tx) => {
     await tx
       .update(leads)
@@ -180,7 +180,7 @@ export async function logNoShow(leadId: number, actor?: string) {
       what: 'No-show',
       by,
       nextFollowUp: nextDate,
-      note: `Missed appointment ${lead.apptDate ?? ''} ${lead.apptTime ?? ''}`.trim(),
+      note: note?.trim() || `Missed appointment ${lead.apptDate ?? ''} ${lead.apptTime ?? ''}`.trim(),
       channel: '',
       createdAt: now,
     });

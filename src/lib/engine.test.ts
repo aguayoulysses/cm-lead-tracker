@@ -261,6 +261,19 @@ describe('normalizeFollowUp', () => {
   });
 });
 
+describe('Disqualified', () => {
+  it('is terminal: stops follow-ups, stamps close date, marks unqualified', () => {
+    const { patch, touch } = applyStatus(lead(), { status: 'Disqualified', note: 'out of service area' }, NOW, TODAY);
+    expect(patch.followUpNeeded).toBe(false);
+    expect(patch.followUpDate).toBeNull();
+    expect(patch.dateClosed).toBe(TODAY);
+    expect(patch.qualified).toBe('No');
+    expect(touch.what).toBe('Disqualified');
+    expect(touch.note).toBe('out of service area');
+    expect(suggestFollowUpDate('Disqualified', TODAY)).toBeNull();
+  });
+});
+
 describe('dates', () => {
   it('addDays crosses months and years', () => {
     expect(addDays('2026-12-31', 1)).toBe('2027-01-01');

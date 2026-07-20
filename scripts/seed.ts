@@ -17,6 +17,7 @@ const STATUSES = [
   'Closed Lost',
   'Not Interested',
   'Bad Number',
+  'Disqualified',
 ];
 
 async function main() {

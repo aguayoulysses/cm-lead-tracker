@@ -18,6 +18,7 @@ interface Scorecard {
     noShows: number;
     reschedules: number;
     closedDeals: number;
+    disqualified: number;
   };
   money: {
     newMrrClients: number;
@@ -226,6 +227,7 @@ export default function StatsPage() {
               <Row label="Sales calls taken" value={F.callsTaken} />
               <Row label="No-shows" value={F.noShows} />
               <Row label="Reschedules" value={F.reschedules} />
+              <Row label="Disqualified" value={F.disqualified} />
               <Row label="Closed deals" value={F.closedDeals} />
             </Section>
             <Section title="Money">
