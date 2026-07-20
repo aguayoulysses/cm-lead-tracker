@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { api, fmtMoney, fmtPct } from '@/components/api';
+import { Avatar } from '@/components/avatar';
 
 interface Scorecard {
   closer: string;
@@ -149,8 +150,13 @@ export default function StatsPage() {
               i === 0 ? 'bg-amber text-white' : i === 1 ? 'bg-faint text-white' : i === 2 ? 'bg-[#b08d57] text-white' : 'bg-canvas text-muted';
             return (
               <div key={r.closer} className="flex items-center gap-4 border-b border-line px-4 py-3 last:border-b-0">
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${medal}`}>
-                  {i + 1}
+                <span className="relative shrink-0">
+                  <Avatar name={r.closer} size={44} />
+                  <span
+                    className={`absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${medal}`}
+                  >
+                    {i + 1}
+                  </span>
                 </span>
                 <div className="w-24 shrink-0">
                   <p className="text-sm font-bold">{r.closer}</p>

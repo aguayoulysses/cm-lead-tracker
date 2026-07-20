@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { api, statusChip, fmtMoney, type Buckets, type BucketLead } from '@/components/api';
+import { Avatar } from '@/components/avatar';
 import { LeadCard } from '@/components/lead-card';
 import { CalendarMonth } from '@/components/calendar-month';
 import { EodPanel } from '@/components/eod-panel';
@@ -105,10 +106,11 @@ export default function WorkPage() {
             <button
               key={c}
               onClick={() => pickCloser(c)}
-              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors ${
                 closer === c ? 'bg-navy text-white' : 'text-muted hover:bg-canvas hover:text-ink'
               }`}
             >
+              {c !== 'All' && <Avatar name={c} size={22} />}
               {c}
             </button>
           ))}
@@ -204,8 +206,13 @@ function Leaderboard({ rows }: { rows: LeaderRow[] }) {
         {rows.slice(0, 3).map((r, i) => (
           <div key={r.closer} className="px-4 py-3">
             <div className="flex items-center gap-2">
-              <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${medals[i] ?? 'bg-canvas text-muted'}`}>
-                {i + 1}
+              <span className="relative shrink-0">
+                <Avatar name={r.closer} size={34} />
+                <span
+                  className={`absolute -right-1 -bottom-1 flex h-4.5 w-4.5 items-center justify-center rounded-full text-[10px] font-bold ${medals[i] ?? 'bg-canvas text-muted'}`}
+                >
+                  {i + 1}
+                </span>
               </span>
               <span className="text-sm font-bold">{r.closer}</span>
               <span className="ml-auto text-lg font-bold text-navydeep">{fmtMoney(r.contractValue)}</span>
