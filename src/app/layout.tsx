@@ -26,6 +26,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/stats" className="text-ink hover:text-navy">
                 Stats
               </Link>
+              <a
+                href="/onboarding.html"
+                target="_blank"
+                rel="noopener"
+                className="text-ink hover:text-navy"
+              >
+                Onboarding
+              </a>
             </nav>
           </div>
         </header>

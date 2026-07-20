@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="only light">
+<meta name="darkreader-lock">
+<title>Cavenaugh Media | Closer Onboarding</title>
+<style>
+  :root {
+    color-scheme: only light;
+    --ink: #16283E;
+    --navy: #1D4E7E;
+    --navy-deep: #1D3A57;
+    --blue: #4E86C2;
+    --blue-ink: #2F62A0;
+    --blue-soft: #EAF2FA;
+    --muted: #4C6076;
+    --board: #FFFFFF;
+    --dot: #DCE5F0;
+    --line: #D8E2EE;
+    --wire: #9FB4CC;
+    --green: #2C7A57;
+    --green-ink: #226347;
+    --green-soft: #E3F1EA;
+    --amber-soft: #FFF6E0;
+    --amber-ink: #8A6210;
+    --shadow: 0 1px 2px rgba(22,40,62,0.06), 0 8px 20px rgba(22,40,62,0.08);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--board);
+    background-image: radial-gradient(circle, var(--dot) 1.6px, transparent 1.6px);
+    background-size: 26px 26px;
+    color: var(--ink);
+    font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+
+  /* ---------- progress chrome ---------- */
+  #progress {
+    position: fixed; top: 14px; right: 14px; z-index: 20;
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 14px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(6px);
+    font-size: 12.5px; font-weight: 700;
+  }
+  #progress .bar {
+    width: 110px; height: 7px; border-radius: 99px;
+    background: var(--blue-soft); overflow: hidden;
+  }
+  #progress .bar i {
+    display: block; height: 100%; width: 0%;
+    background: var(--green); border-radius: 99px;
+    transition: width .3s ease;
+  }
+  #progress span { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* ---------- layout ---------- */
+  .wrap { max-width: 860px; margin: 0 auto; padding: 56px 24px 120px; }
+
+  header.hero {
+    display: flex; gap: 28px; align-items: center;
+    margin-bottom: 26px;
+  }
+  header.hero img { width: 150px; height: auto; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.18em; font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 6px; }
+  header.hero h1 { font-size: 36px; line-height: 1.08; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.01em; }
+  header.hero p { color: var(--muted); font-size: 15px; margin: 0; max-width: 58ch; line-height: 1.55; }
+
+  .hero-note {
+    background: var(--navy); color: #fff;
+    border-radius: 16px; padding: 20px 24px;
+    box-shadow: var(--shadow);
+    font-size: 14px; line-height: 1.55;
+    margin-bottom: 54px;
+  }
+  .hero-note b { color: #fff; }
+
+  /* ---------- stations ---------- */
+  .station {
+    position: relative;
+    padding-left: 74px;
+    margin-bottom: 58px;
+  }
+  .station::before {
+    content: "";
+    position: absolute; left: 25px; top: 54px; bottom: -58px;
+    width: 2px;
+    background: repeating-linear-gradient(to bottom, var(--wire) 0 6px, transparent 6px 12px);
+  }
+  .station:last-of-type::before { display: none; }
+  .station .num {
+    position: absolute; left: 0; top: 0;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--navy); color: #fff;
+    display: grid; place-items: center;
+    font-size: 20px; font-weight: 700;
+    box-shadow: var(--shadow);
+    transition: background .25s ease;
+  }
+  .station.done .num { background: var(--green); }
+  .station.done .num::after { content: "✓"; position: absolute; font-size: 20px; }
+  .station.done .num b { visibility: hidden; }
+
+  .station h2 { margin: 6px 0 6px; font-size: 23px; letter-spacing: -0.01em; }
+  .station > .why {
+    color: var(--muted); font-size: 14.5px; line-height: 1.6;
+    max-width: 62ch; margin: 0 0 18px;
+  }
+
+  /* ---------- cards ---------- */
+  .card {
+    background: var(--board);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+  }
+  .card .top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .card h3 { margin: 0; font-size: 16.5px; }
+  .badge {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 99px;
+    background: var(--blue-soft); color: var(--blue-ink);
+  }
+  .badge.form { background: var(--green-soft); color: var(--green-ink); }
+  .badge.primary { background: var(--navy); color: #fff; }
+  .badge.todo { background: var(--amber-soft); color: var(--amber-ink); }
+  .card p { margin: 0 0 14px; font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 64ch; }
+  .card p b { color: var(--ink); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 14px; }
+  .chips span {
+    font-size: 12px; font-weight: 600;
+    background: var(--blue-soft); color: var(--blue-ink);
+    border-radius: 8px; padding: 5px 11px;
+  }
+
+  a.open {
+    display: inline-block;
+    background: var(--navy); color: #fff;
+    text-decoration: none;
+    font-size: 13.5px; font-weight: 700;
+    padding: 10px 18px; border-radius: 9px;
+    transition: background .15s ease;
+  }
+  a.open:hover { background: var(--navy-deep); }
+  a.open.ghost {
+    background: transparent; color: var(--navy);
+    border: 1.5px solid var(--navy);
+  }
+  a.open.ghost:hover { background: var(--blue-soft); }
+  a.open.disabled { background: var(--line); color: var(--muted); pointer-events: none; }
+
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 680px) { .pair { grid-template-columns: 1fr; } }
+
+  /* ---------- done toggle ---------- */
+  .mark {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 4px;
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    cursor: pointer; user-select: none;
+    background: none; border: 1px solid var(--line); border-radius: 9px;
+    padding: 8px 14px; font-family: inherit;
+  }
+  .mark:hover { background: var(--blue-soft); }
+  .station.done .mark { background: var(--green-soft); border-color: var(--green); color: var(--green-ink); }
+
+  /* ---------- finish ---------- */
+  .finish {
+    margin-left: 74px;
+    background: var(--green-soft);
+    border: 1px solid var(--green);
+    border-radius: 16px;
+    padding: 26px 28px;
+  }
+  .finish h2 { margin: 0 0 8px; color: var(--green-ink); font-size: 22px; }
+  .finish p { margin: 0 0 6px; font-size: 14px; line-height: 1.6; color: var(--ink); max-width: 62ch; }
+  .finish .soon { color: var(--muted); font-size: 13px; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div id="progress"><div class="bar"><i id="pbar"></i></div><span id="ptext">0 / 7</span></div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <img src="/onboarding-logo.png" alt="Cavenaugh Media">
+    <div>
+      <div class="eyebrow">Sales Team</div>
+      <h1>Closer Onboarding</h1>
+      <p>How to get started here as a closer. Everything you need for week one lives on this board, in the order you need it.</p>
+    </div>
+  </header>
+
+  <div class="hero-note">
+    <b>How this board works:</b> work top to bottom, one station at a time. Each card tells you what the asset is, when you use it, and where it lives. Mark each station done as you go so you can pick up where you left off. Budget your first week for stations 1 through 3, then walk 4 through 7 with your manager before your first live call.
+  </div>
+
+  <!-- 1 -->
+  <section class="station" data-id="s1">
+    <div class="num"><b>1</b></div>
+    <h2>Week 1 Training</h2>
+    <p class="why">Before you take a single call, you need to know who we are, who we serve, and how they talk. This is your home base for the entire first week.</p>
+    <div class="card">
+      <div class="top"><h3>Closer Onboarding, Week 1</h3><span class="badge">Notion</span></div>
+      <div class="chips"><span>Google Ads</span><span>SEO</span><span>Our avatar</span><span>Their language</span><span>Company &amp; culture</span></div>
+      <p>Full training on the services we sell, who our avatar is, the language they use, and who we are as a company. Read it in order and take notes. Everything after this station assumes you know this material.</p>
+      <a class="open" href="https://app.notion.com/p/Closer-Onboarding-Week-1-39542cac34cd81dab3d2c0d5e8f821a1" target="_blank" rel="noopener">Open the training →</a>
+    </div>
+    <button class="mark">Mark station done</button>
+  </section>
+
+  <!-- 2 -->
+  <section class="station" data-id="s2">
+    <div class="num"><b>2</b></div>
+    <h2>Your Tools</h2>
+    <p class="why">We audit prospects live on calls. These three tools are how you do it, and one doc covers all of them.</p>
+    <div class="card">
+      <div class="top"><h3>Sales Rep Tools SOP</h3><span class="badge">Google Doc</span></div>
+      <div class="chips"><span>SEMrush</span><span>Search Atlas</span><span>PageSpeed (web.dev)</span></div>
+      <p>One doc with everything: what each tool is for, how to sign in, the logins, and how to use them on a call. <b>Do not hunt for credentials anywhere else, they all live in this doc.</b></p>
+      <a class="open" href="https://docs.google.com/document/d/1iIks2FPDlBkz7OXKBfJdmE3Yz9U8tXig-VegUGH4oKE/edit?tab=t.kasm44pnxjw8" target="_blank" rel="noopener">Open the tools SOP →</a>
+    </div>
+    <button class="mark">Mark station done</button>
+  </section>
+
+  <!-- 3 -->
+  <section class="station" data-id="s3">
+    <div class="num"><b>3</b></div>
+    <h2>Who We Say Yes and No To</h2>
+    <p class="why">A big part of being a closer here is protecting the roster. We only bring on clients who fit our company and our culture. Disqualifying the wrong fit is a win, not a loss.</p>
+    <div class="card">
+      <div class="top"><h3>DQ Board</h3><span class="badge">Web page</span></div>
+      <p>Our ICP and our anti-ICP, spelled out. Who we serve, who we do not, and the signals to check before a deal moves forward. Know this cold before your first discovery call.</p>
+      <a class="open" href="https://cavenaugh-dq-board.vercel.app/" target="_blank" rel="noopener">Open the DQ board →</a>
+    </div>
+    <button class="mark">Mark station done</button>
+  </section>
+
+  <!-- 4 -->
+  <section class="station" data-id="s4">
+    <div class="num"><b>4</b></div>
+    <h2>Running the Call</h2>
+    <p class="why">Every sales call starts with discovery. This framework is how we run it, every time.</p>
+    <div class="card">
+      <div class="top"><h3>First Call B2B Framework</h3><span class="badge">Google Doc</span></div>
+      <p>The discovery framework you follow on every call: the questions to ask, the order to ask them in, and what you are listening for. Pairs with the DQ board from station 3.</p>
+      <a class="open" href="https://docs.google.com/document/d/1HPZdgfcMzE3ydJxLEIw_17Taa2qcdNE-T2kGzYkJ1Hs/edit" target="_blank" rel="noopener">Open the framework →</a>
+    </div>
+    <button class="mark">Mark station done</button>
+  </section>
+
+  <!-- 5 -->
+  <section class="station" data-id="s5">
+    <div class="num"><b>5</b></div>
+    <h2>Pitching</h2>
+    <p class="why">You have three pitch assets. Pick based on the buyer in front of you. When in doubt, the offer page is your default.</p>
+    <div class="card">
+      <div class="top"><h3>Offer Page</h3><span class="badge primary">Primary</span></div>
+      <p><b>Your default pitch asset.</b> Built around specific case studies that are fast to reference live on a call. If you only master one of the three, master this one.</p>
+      <a class="open" href="https://cavenaugh-growth-system.vercel.app/offer#offer" target="_blank" rel="noopener">Open the offer page →</a>
+    </div>
+    <div class="pair">
+      <div class="card">
+        <div class="top"><h3>Growth System Board</h3><span class="badge">Web page</span></div>
+        <p>The detailed, step-by-step view of how we operate as an agency. Use it for nuanced buyers who want to see exactly how the machine works.</p>
+        <a class="open ghost" href="https://cavenaugh-growth-system.vercel.app/" target="_blank" rel="noopener">Open the board →</a>
+      </div>
+      <div class="card">
+        <div class="top"><h3>Slide Deck</h3><span class="badge">Web page</span></div>
+        <p>The general picture: who we are, how we work, timelines, and the day-to-day logistics. Use it when the buyer needs the overview, not the deep dive.</p>
+        <a class="open ghost" href="https://cavenaugh-growth-system.vercel.app/deck#1" target="_blank" rel="noopener">Open the deck →</a>
+      </div>
+    </div>
+    <button class="mark">Mark station done</button>
+  </section>
+
+  <!-- 6 -->
+  <section class="station" data-id="s6">
+    <div class="num"><b>6</b></div>
+    <h2>After the Call</h2>
+    <p class="why">Every call ends with a form. No exceptions. This is how the pipeline stays clean and how the team knows what happened.</p>
+    <div class="pair">
+      <div class="card">
+        <div class="top"><h3>Post-Call Setter Form</h3><span class="badge form">Form</span></div>
+        <p>Fill this out immediately after every <b>setting call</b> you take, while the details are fresh.</p>
+        <a class="open" href="https://link.cavenaughmedia.com/widget/form/0on3JltBrs9TxDm6RN1a" target="_blank" rel="noopener">Open the setter form →</a>
+      </div>
+      <div class="card">
+        <div class="top"><h3>Post-Call Closer Form</h3><span class="badge form">Form</span></div>
+        <p>Fill this out immediately after every <b>closing call</b> you take, win or lose.</p>
+        <a class="open" href="https://link.cavenaughmedia.com/widget/form/UEam30m10pZWvSKBBPJ7?notrack=true" target="_blank" rel="noopener">Open the closer form →</a>
+      </div>
+    </div>
+    <button class="mark">Mark station done</button>
+  </section>
+
+  <!-- 7 -->
+  <section class="station" data-id="s7">
+    <div class="num"><b>7</b></div>
+    <h2>You Are Ready</h2>
+    <p class="why">That is the full toolkit: the training, the tools, who we serve, how the call runs, how you pitch, and what happens after.</p>
+    <div class="finish">
+      <h2>Welcome to the team.</h2>
+      <p>From here, your day-to-day lives in the sales flow board: when to do what, at what times, every day.</p>
+    </div>
+    <button class="mark">Mark station done</button>
+  </section>
+
+</div>
+
+<script>
+  const KEY = "cm-closer-onboarding-v1";
+  const state = JSON.parse(localStorage.getItem(KEY) || "{}");
+  const stations = [...document.querySelectorAll(".station")];
+  const pbar = document.getElementById("pbar");
+  const ptext = document.getElementById("ptext");
+
+  function render() {
+    let done = 0;
+    stations.forEach(s => {
+      const on = !!state[s.dataset.id];
+      s.classList.toggle("done", on);
+      s.querySelector(".mark").textContent = on ? "Done ✓" : "Mark station done";
+      if (on) done++;
+    });
+    pbar.style.width = (done / stations.length * 100) + "%";
+    ptext.textContent = done + " / " + stations.length;
+  }
+
+  stations.forEach(s => {
+    s.querySelector(".mark").addEventListener("click", () => {
+      state[s.dataset.id] = !state[s.dataset.id];
+      localStorage.setItem(KEY, JSON.stringify(state));
+      render();
+    });
+  });
+
+  render();
+</script>
+</body>
+</html>

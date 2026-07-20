@@ -120,7 +120,6 @@ export default function WorkPage() {
           <nav className="flex gap-1 rounded-lg border border-line bg-card p-0.5">
             {(
               [
-                ['list', 'Follow-Ups'],
                 ['directory', 'All Leads'],
                 ['calendar', 'Calendar'],
                 ['eod', 'End of Day'],
@@ -128,7 +127,7 @@ export default function WorkPage() {
             ).map(([t, label]) => (
               <button
                 key={t}
-                onClick={() => setTab(t)}
+                onClick={() => setTab(tab === t ? 'list' : t)}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium ${
                   tab === t ? 'bg-bluesoft text-blueink' : 'text-muted hover:text-ink'
                 }`}
