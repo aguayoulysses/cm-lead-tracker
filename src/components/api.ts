@@ -25,9 +25,15 @@ export interface FreshLead extends BucketLead {
   attempted: boolean;
 }
 
+export interface AttemptedLead extends BucketLead {
+  attempts: number;
+  lastAttemptAt: string | null;
+}
+
 export interface Buckets {
   today: string;
   fresh: FreshLead[];
+  attempted: AttemptedLead[];
   overdue: BucketLead[];
   dueToday: BucketLead[];
   next7: BucketLead[];

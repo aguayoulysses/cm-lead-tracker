@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { api, statusChip, fmtMoney, type Buckets, type FreshLead } from '@/components/api';
+import { api, statusChip, fmtMoney, type AttemptedLead, type Buckets, type FreshLead } from '@/components/api';
 import { Avatar } from '@/components/avatar';
 import { LeadCard } from '@/components/lead-card';
 import { CalendarMonth } from '@/components/calendar-month';
 import { EodPanel } from '@/components/eod-panel';
 
-type Tab = 'list' | 'directory' | 'calendar' | 'eod';
+type Tab = 'list' | 'attempted' | 'directory' | 'calendar' | 'eod';
 
 interface LeaderRow {
   closer: string;
@@ -46,6 +46,11 @@ export default function WorkPage() {
   const [showNewLead, setShowNewLead] = useState(false);
 
   useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    if (t === 'attempted' || t === 'directory' || t === 'calendar' || t === 'eod') setTab(t);
+  }, []);
+
+  useEffect(() => {
     api<{ id: number; name: string }[]>('/api/closers').then((rows) => {
       setClosers(['All', ...rows.map((r) => r.name)]);
       const saved = localStorage.getItem('cmCloser');
@@ -72,6 +77,14 @@ export default function WorkPage() {
   function openFromFresh(id: number) {
     if (!buckets) return;
     const q = buckets.fresh.map((l) => l.id);
+    setQueue(q.includes(id) ? q : []);
+    setOpenLead(id);
+  }
+
+  /** Open an attempted-but-unreached lead, cycling through that pool. */
+  function openFromAttempted(id: number) {
+    if (!buckets) return;
+    const q = buckets.attempted.map((l) => l.id);
     setQueue(q.includes(id) ? q : []);
     setOpenLead(id);
   }
@@ -129,6 +142,7 @@ export default function WorkPage() {
           <nav className="flex gap-1 rounded-lg border border-line bg-card p-0.5">
             {(
               [
+                ['attempted', 'No Contact Yet'],
                 ['directory', 'All Leads'],
                 ['calendar', 'Calendar'],
                 ['eod', 'End of Day'],
@@ -159,6 +173,12 @@ export default function WorkPage() {
       {tab === 'list' && buckets && (
         <div className="mx-auto max-w-2xl">
           <FreshBucket leads={buckets.fresh} onOpen={openFromFresh} />
+        </div>
+      )}
+
+      {tab === 'attempted' && buckets && (
+        <div className="mx-auto max-w-2xl">
+          <AttemptedBucket leads={buckets.attempted} onOpen={openFromAttempted} />
         </div>
       )}
 
@@ -316,6 +336,45 @@ function FreshBucket({ leads, onOpen }: { leads: FreshLead[]; onOpen: (id: numbe
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function AttemptedBucket({ leads, onOpen }: { leads: AttemptedLead[]; onOpen: (id: number) => void }) {
+  return (
+    <div className="card overflow-hidden">
+      <div className="h-1 bg-amber" />
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+        <span className="h-2 w-2 rounded-full bg-amber" />
+        <span className="eyebrow text-muted">No contact yet</span>
+        <span className="ml-auto rounded-full bg-ambersoft px-2 py-0.5 text-xs font-semibold text-amberink">{leads.length}</span>
+      </div>
+      <p className="px-4 pb-2 text-[11px] text-faint">
+        Attempted but never reached — still up for grabs. First contact claims the lead.
+      </p>
+      {leads.length === 0 && <p className="px-4 pb-4 text-sm text-faint">Nothing waiting — every attempted lead has been reached.</p>}
+      <div className="max-h-[65vh] overflow-y-auto">
+        {leads.map((l) => (
+          <button
+            key={l.id}
+            onClick={() => onOpen(l.id)}
+            className="block w-full border-t border-line px-4 py-2.5 text-left transition-colors hover:bg-ambersoft/40"
+          >
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="truncate text-sm font-semibold">{l.name}</span>
+              <span className="shrink-0 text-xs text-faint">due {l.date?.slice(5).replace('-', '/') ?? '—'}</span>
+            </span>
+            <span className="mt-1 flex items-center gap-2 text-[11px]">
+              <span className={`rounded px-1.5 py-0.5 font-medium ${statusChip(l.status)}`}>{l.status}</span>
+              <span className="text-faint">
+                {l.attempts} attempt{l.attempts === 1 ? '' : 's'}
+                {l.lastAttemptAt && ` · last ${l.lastAttemptAt.slice(5, 16).replace('T', ' ').replace('-', '/')}`}
+              </span>
+              <span className="ml-auto text-faint">{l.phone}</span>
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   );

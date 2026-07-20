@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, desc, eq, ne, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
 import { leads } from '@/db/schema';
@@ -60,6 +60,33 @@ export async function GET(req: NextRequest) {
     .where(and(eq(leads.status, 'New'), eq(leads.followUpNeeded, true)));
   freshRows.sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
 
+  const closerCond = closer !== 'All' ? [or(eq(leads.contactedBy, closer), eq(leads.contactedBy, ''))!] : [];
+
+  // Attempted pool: worked at least once but never actually reached
+  // (attempt-only statuses). Still unowned until someone connects.
+  const attemptedRows = await db
+    .select({
+      id: leads.id,
+      firstName: leads.firstName,
+      lastName: leads.lastName,
+      status: leads.status,
+      phone: leads.phone,
+      contactedBy: leads.contactedBy,
+      followUpDate: leads.followUpDate,
+      attempt1At: leads.attempt1At,
+      attempt2At: leads.attempt2At,
+      attempt3At: leads.attempt3At,
+    })
+    .from(leads)
+    .where(
+      and(
+        eq(leads.followUpNeeded, true),
+        inArray(leads.status, ['Attempted - No Answer', 'Left Voicemail']),
+        ...closerCond,
+      ),
+    );
+  attemptedRows.sort((a, b) => ((a.followUpDate ?? '9999') < (b.followUpDate ?? '9999') ? -1 : 1));
+
   const rows = await db
     .select({
       id: leads.id,
@@ -78,7 +105,7 @@ export async function GET(req: NextRequest) {
         ne(leads.status, 'New'),
         // A closer sees their own leads AND the unowned pool (nobody has made
         // contact yet, so those are still up for grabs).
-        ...(closer !== 'All' ? [or(eq(leads.contactedBy, closer), eq(leads.contactedBy, ''))!] : []),
+        ...closerCond,
       ),
     );
 
@@ -104,6 +131,16 @@ export async function GET(req: NextRequest) {
       dateSubmitted: l.dateSubmitted,
       timeSubmitted: l.timeSubmitted,
       attempted: !!l.attempt1At,
+    })),
+    attempted: attemptedRows.map((l) => ({
+      id: l.id,
+      name: `${l.firstName} ${l.lastName}`.trim(),
+      status: l.status,
+      phone: l.phone,
+      by: l.contactedBy,
+      date: l.followUpDate,
+      attempts: [l.attempt1At, l.attempt2At, l.attempt3At].filter(Boolean).length,
+      lastAttemptAt: [l.attempt1At, l.attempt2At, l.attempt3At].filter(Boolean).sort().pop() ?? null,
     })),
     overdue: buckets.overdue.map(shape),
     dueToday: buckets.dueToday.map(shape),
