@@ -26,6 +26,7 @@ export function CalendarMonth({ closer, onOpenLead }: { closer: string; onOpenLe
   const [month, setMonth] = useState('');
   const [data, setData] = useState<CalendarData | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [apptsOnly, setApptsOnly] = useState(false);
 
   const load = useCallback(
     (m: string) => {
@@ -86,6 +87,20 @@ export function CalendarMonth({ closer, onOpenLead }: { closer: string; onOpenLe
               <span className="h-2 w-2 rounded-full bg-green" /> appointment
             </span>
           </span>
+          <span className="ml-auto flex gap-1 rounded-lg border border-line bg-card p-0.5">
+            <button
+              onClick={() => setApptsOnly(false)}
+              className={`rounded-md px-3 py-1 text-xs font-medium ${!apptsOnly ? 'bg-bluesoft text-blueink' : 'text-muted hover:text-ink'}`}
+            >
+              Everything
+            </button>
+            <button
+              onClick={() => setApptsOnly(true)}
+              className={`rounded-md px-3 py-1 text-xs font-medium ${apptsOnly ? 'bg-greensoft text-greenink' : 'text-muted hover:text-ink'}`}
+            >
+              Appointments only
+            </button>
+          </span>
         </div>
 
         <div className="card overflow-hidden">
@@ -118,7 +133,7 @@ export function CalendarMonth({ closer, onOpenLead }: { closer: string; onOpenLe
                       >
                         {Number(day.slice(8))}
                       </span>
-                      {entry?.followUps.slice(0, 3).map((f) => (
+                      {!apptsOnly && entry?.followUps.slice(0, 3).map((f) => (
                         <p key={`f${f.leadId}`} className="mt-0.5 truncate text-blueink">
                           <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-blue align-middle" />
                           {f.name}
@@ -131,7 +146,7 @@ export function CalendarMonth({ closer, onOpenLead }: { closer: string; onOpenLe
                           {a.time ? ` · ${a.time}` : ''}
                         </p>
                       ))}
-                      {entry && entry.followUps.length + entry.appts.length > 6 && (
+                      {entry && !apptsOnly && entry.followUps.length + entry.appts.length > 6 && (
                         <p className="mt-0.5 text-faint">+{entry.followUps.length + entry.appts.length - 6} more</p>
                       )}
                     </>
@@ -152,7 +167,7 @@ export function CalendarMonth({ closer, onOpenLead }: { closer: string; onOpenLe
           </p>
           {!selectedDay && <p className="pt-3 text-sm text-faint">Click a day to see its leads here.</p>}
           {selectedDay && !selected && <p className="pt-3 text-sm text-faint">Nothing due this day.</p>}
-          {selected?.followUps.map((f) => (
+          {!apptsOnly && selected?.followUps.map((f) => (
             <button
               key={`f${f.leadId}`}
               onClick={() => onOpenLead(f.leadId)}

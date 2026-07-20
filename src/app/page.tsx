@@ -5,9 +5,9 @@ import { api, statusChip, fmtMoney, type AttemptedLead, type Buckets, type Fresh
 import { Avatar } from '@/components/avatar';
 import { LeadCard } from '@/components/lead-card';
 import { CalendarMonth } from '@/components/calendar-month';
-import { EodPanel } from '@/components/eod-panel';
+import { AppointmentsToday } from '@/components/appointments-today';
 
-type Tab = 'list' | 'directory' | 'calendar' | 'eod';
+type Tab = 'list' | 'directory' | 'calendar';
 
 interface LeaderRow {
   closer: string;
@@ -44,10 +44,11 @@ export default function WorkPage() {
   const [openLead, setOpenLead] = useState<number | null>(null);
   const [queue, setQueue] = useState<number[]>([]);
   const [showNewLead, setShowNewLead] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab');
-    if (t === 'directory' || t === 'calendar' || t === 'eod') setTab(t);
+    if (t === 'directory' || t === 'calendar') setTab(t);
   }, []);
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export default function WorkPage() {
       const monthStart = `${b.today.slice(0, 7)}-01`;
       api<LeaderRow[]>(`/api/stats/by-closer?from=${monthStart}&to=${b.today}`).then(setLeaders);
     });
+    setReloadTick((t) => t + 1);
   }, [closer]);
 
   useEffect(loadBuckets, [loadBuckets]);
@@ -144,7 +146,6 @@ export default function WorkPage() {
               [
                 ['directory', 'All Leads'],
                 ['calendar', 'Calendar'],
-                ['eod', 'End of Day'],
               ] as [Tab, string][]
             ).map(([t, label]) => (
               <button
@@ -167,7 +168,7 @@ export default function WorkPage() {
         </div>
       </div>
 
-      {leaders.length > 0 && tab !== 'eod' && <Leaderboard rows={leaders} />}
+      {leaders.length > 0 && <Leaderboard rows={leaders} />}
 
       {tab === 'list' && buckets && (
         <div className="grid items-start gap-5 md:grid-cols-2">
@@ -179,6 +180,12 @@ export default function WorkPage() {
       {tab === 'directory' && <Directory closers={closers} onOpen={(id) => { setQueue([]); setOpenLead(id); }} />}
       {tab === 'calendar' && buckets && (
         <>
+          <AppointmentsToday
+            closer={closer}
+            tick={reloadTick}
+            onOpenLead={(id) => { setQueue([]); setOpenLead(id); }}
+            onChanged={loadBuckets}
+          />
           {buckets.overdue.length + buckets.dueToday.length > 0 && (
             <button
               onClick={startFollowUpQueue}
@@ -192,7 +199,6 @@ export default function WorkPage() {
           <CalendarMonth closer={closer} onOpenLead={(id) => { setQueue([]); setOpenLead(id); }} />
         </>
       )}
-      {tab === 'eod' && <EodPanel />}
 
       {openLead != null && buckets && (
         <LeadCard

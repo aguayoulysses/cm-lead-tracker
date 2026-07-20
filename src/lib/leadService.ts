@@ -1,7 +1,7 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { kpiLog, leads, touches } from '@/db/schema';
-import { nowInTz, todayInTz, dayOfWeek } from './dates';
+import { addDays, nowInTz, todayInTz, dayOfWeek } from './dates';
 import {
   applyExtraTouch,
   applyStatus,
@@ -158,6 +158,70 @@ export async function createLead(input: NewLeadInput) {
     })
     .returning({ id: leads.id });
   return inserted[0].id;
+}
+
+/** Appointment no-show: KPI no-show for the closer, chase again tomorrow. */
+export async function logNoShow(leadId: number, actor?: string) {
+  const lead = await getLeadOrThrow(leadId);
+  const now = nowInTz();
+  const today = todayInTz();
+  const by = actor && actor !== 'All' ? actor : lead.contactedBy;
+  const nextDate = addDays(today, 1);
+  await db.transaction(async (tx) => {
+    await tx
+      .update(leads)
+      .set({ followUpNeeded: true, followUpDate: nextDate, updatedAt: now })
+      .where(eq(leads.id, leadId));
+    await tx.insert(touches).values({
+      leadId,
+      leadNameSnapshot: `${lead.firstName} ${lead.lastName}`.trim(),
+      phoneSnapshot: lead.phone,
+      at: now,
+      what: 'No-show',
+      by,
+      nextFollowUp: nextDate,
+      note: `Missed appointment ${lead.apptDate ?? ''} ${lead.apptTime ?? ''}`.trim(),
+      channel: '',
+      createdAt: now,
+    });
+    await tx.insert(kpiLog).values({ date: today, closer: by, noShows: 1, leadId, createdAt: now });
+  });
+  return getLeadOrThrow(leadId);
+}
+
+/** Appointment rescheduled: move the appointment, follow-up rides along. */
+export async function rescheduleAppt(leadId: number, newDate: string, newTime: string, actor?: string) {
+  const lead = await getLeadOrThrow(leadId);
+  const now = nowInTz();
+  const today = todayInTz();
+  const by = actor && actor !== 'All' ? actor : lead.contactedBy;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(leads)
+      .set({
+        apptSet: true,
+        apptDate: newDate,
+        apptTime: newTime,
+        followUpNeeded: true,
+        followUpDate: newDate,
+        updatedAt: now,
+      })
+      .where(eq(leads.id, leadId));
+    await tx.insert(touches).values({
+      leadId,
+      leadNameSnapshot: `${lead.firstName} ${lead.lastName}`.trim(),
+      phoneSnapshot: lead.phone,
+      at: now,
+      what: 'Rescheduled',
+      by,
+      nextFollowUp: newDate,
+      note: `Appointment moved to ${newDate} ${newTime}`,
+      channel: '',
+      createdAt: now,
+    });
+    await tx.insert(kpiLog).values({ date: today, closer: by, reschedules: 1, leadId, createdAt: now });
+  });
+  return getLeadOrThrow(leadId);
 }
 
 /** Update the deal numbers on any lead, logged as a touch for the paper trail. */
