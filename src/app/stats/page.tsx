@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { api, fmtMoney, fmtPct } from '@/components/api';
 
 interface Scorecard {
@@ -112,80 +112,83 @@ export default function StatsPage() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-end gap-3">
+      <div className="mb-6 flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-xs text-zinc-500">Closer</label>
-          <select value={closer} onChange={(e) => setCloser(e.target.value)} className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm">
+          <label className="text-xs font-medium text-muted">Closer</label>
+          <select value={closer} onChange={(e) => setCloser(e.target.value)} className="field mt-1 w-36">
             {closers.map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-zinc-500">From</label>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm" />
+          <label className="text-xs font-medium text-muted">From</label>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="field mt-1" />
         </div>
         <div>
-          <label className="block text-xs text-zinc-500">To</label>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm" />
+          <label className="text-xs font-medium text-muted">To</label>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="field mt-1" />
         </div>
-        <span className="pb-1 text-xs text-zinc-500">Defaults to month-to-date</span>
+        <span className="pb-2 text-xs text-faint">Defaults to month-to-date</span>
       </div>
 
       {card && F && M && R && (
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Section title="FUNNEL" color="bg-violet-900">
-            <Row label="Total Leads" value={F.totalLeads} />
-            <Row label="Dials" value={F.dials} />
-            <Row label="Pickups" value={F.pickups} />
-            <Row label="Sales Calls on Calendar" value={F.callsOnCalendar} />
-            <Row label="Sales Calls Taken" value={F.callsTaken} />
-            <Row label="No-Shows" value={F.noShows} />
-            <Row label="Reschedules" value={F.reschedules} />
-            <Row label="Closed Deals" value={F.closedDeals} />
-          </Section>
-          <Section title="MONEY" color="bg-emerald-900">
-            <Row label="New MRR Clients" value={M.newMrrClients} />
-            <Row label="One-Time Booked" value={fmtMoney(M.oneTime)} />
-            <Row label="New MRR ($/mo)" value={fmtMoney(M.mrr)} />
-            <Row label="Contract Value (1x + 12mo MRR)" value={fmtMoney(M.contractValue)} />
-            <Row label="Cash Collected" value={fmtMoney(M.cashCollected)} />
-            <Row label="Commission (est.)" value={fmtMoney(M.commission)} />
-            <Row label="Avg Speed to Lead" value={M.avgSpeedToLeadMin != null ? `${M.avgSpeedToLeadMin} min` : 'n/a'} />
-          </Section>
-          <Section title="RATES" color="bg-sky-900">
-            <Row label="Connect Rate (pickups / dials)" value={fmtPct(R.connect)} />
-            <Row label="Show-up Rate (taken / on calendar)" value={fmtPct(R.showUp)} />
-            <Row label="Close Rate (closed / taken)" value={fmtPct(R.close)} />
-          </Section>
-        </div>
+        <>
+          <div className="mb-5 grid gap-4 sm:grid-cols-3">
+            <RateTile label="Connect rate" sub="pickups / dials" value={fmtPct(R.connect)} />
+            <RateTile label="Show-up rate" sub="taken / on calendar" value={fmtPct(R.showUp)} />
+            <RateTile label="Close rate" sub="closed / taken" value={fmtPct(R.close)} />
+          </div>
+
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            <Section title="Funnel">
+              <Row label="Total leads" value={F.totalLeads} />
+              <Row label="Dials" value={F.dials} />
+              <Row label="Pickups" value={F.pickups} />
+              <Row label="Sales calls on calendar" value={F.callsOnCalendar} />
+              <Row label="Sales calls taken" value={F.callsTaken} />
+              <Row label="No-shows" value={F.noShows} />
+              <Row label="Reschedules" value={F.reschedules} />
+              <Row label="Closed deals" value={F.closedDeals} />
+            </Section>
+            <Section title="Money">
+              <Row label="New MRR clients" value={M.newMrrClients} />
+              <Row label="One-time booked" value={fmtMoney(M.oneTime)} />
+              <Row label="New MRR ($/mo)" value={fmtMoney(M.mrr)} />
+              <Row label="Contract value (1x + 12mo MRR)" value={fmtMoney(M.contractValue)} strong />
+              <Row label="Cash collected" value={fmtMoney(M.cashCollected)} />
+              <Row label="Commission (est.)" value={fmtMoney(M.commission)} />
+              <Row label="Avg speed to lead" value={M.avgSpeedToLeadMin != null ? `${M.avgSpeedToLeadMin} min` : 'n/a'} />
+            </Section>
+          </div>
+        </>
       )}
 
-      <h2 className="mt-8 mb-2 text-sm font-bold text-zinc-300">BY CLOSER (who controls the leads — all time)</h2>
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
+      <div className="card mt-6 overflow-hidden">
+        <p className="eyebrow border-b border-line px-4 py-3 text-muted">By closer &middot; all time</p>
         <table className="w-full text-sm">
-          <thead className="bg-zinc-900 text-left text-xs text-zinc-400">
-            <tr>
-              <th className="px-3 py-2">Closer</th>
-              <th className="px-3 py-2 text-right">Worked</th>
-              <th className="px-3 py-2 text-right">Appts</th>
-              <th className="px-3 py-2 text-right">Won</th>
-              <th className="px-3 py-2 text-right">Rev (1x + MRR)</th>
+          <thead>
+            <tr className="border-b border-line text-left text-xs font-semibold text-muted">
+              <th className="px-4 py-2">Closer</th>
+              <th className="px-4 py-2 text-right">Worked</th>
+              <th className="px-4 py-2 text-right">Appts</th>
+              <th className="px-4 py-2 text-right">Won</th>
+              <th className="px-4 py-2 text-right">Rev (1x + MRR)</th>
             </tr>
           </thead>
           <tbody>
             {byCloser.map((r) => (
-              <tr key={r.closer} className="border-t border-zinc-800">
-                <td className="px-3 py-2 font-semibold">{r.closer}</td>
-                <td className="px-3 py-2 text-right">{r.worked}</td>
-                <td className="px-3 py-2 text-right">{r.appts}</td>
-                <td className="px-3 py-2 text-right">{r.won}</td>
-                <td className="px-3 py-2 text-right">{fmtMoney(r.revenue)}</td>
+              <tr key={r.closer} className="border-b border-line last:border-b-0">
+                <td className="px-4 py-2.5 font-semibold">{r.closer}</td>
+                <td className="px-4 py-2.5 text-right">{r.worked}</td>
+                <td className="px-4 py-2.5 text-right">{r.appts}</td>
+                <td className="px-4 py-2.5 text-right">{r.won}</td>
+                <td className="px-4 py-2.5 text-right font-semibold">{fmtMoney(r.revenue)}</td>
               </tr>
             ))}
             {byCloser.length === 0 && (
               <tr>
-                <td className="px-3 py-3 text-zinc-500" colSpan={5}>
+                <td className="px-4 py-3 text-faint" colSpan={5}>
                   No owned leads yet
                 </td>
               </tr>
@@ -194,93 +197,106 @@ export default function StatsPage() {
         </table>
       </div>
 
-      <h2 className="mt-8 mb-2 text-sm font-bold text-zinc-300">
-        BY AD SET (attribution / ROAS — type spend into the yellow cells, Enter to save)
-      </h2>
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-900 text-left text-xs text-zinc-400">
-            <tr>
-              <th className="px-3 py-2">Ad Set</th>
-              <th className="px-3 py-2">Campaign</th>
-              <th className="px-3 py-2 text-right">Ad Spend</th>
-              <th className="px-3 py-2 text-right">Leads</th>
-              <th className="px-3 py-2 text-right">Won</th>
-              <th className="px-3 py-2 text-right">One-Time Rev</th>
-              <th className="px-3 py-2 text-right">New MRR</th>
-              <th className="px-3 py-2 text-right">Annualized ROAS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {roas.map((r) => (
-              <>
-                <tr key={r.adSetName} className="border-t border-zinc-800">
-                  <td className="px-3 py-2">
-                    <button onClick={() => toggleAds(r.adSetName)} className="text-left font-semibold hover:text-emerald-400">
-                      {ads[r.adSetName] ? '▾' : '▸'} {r.adSetName}
-                    </button>
-                  </td>
-                  <td className="px-3 py-2 text-xs text-zinc-500">{r.campaignName}</td>
-                  <td className="px-3 py-2 text-right">
-                    <input
-                      className="w-24 rounded border border-amber-700/60 bg-amber-950/40 px-1 py-0.5 text-right text-amber-200"
-                      value={spendDrafts[r.adSetName] ?? (r.spend ? String(r.spend) : '')}
-                      placeholder="$0"
-                      onChange={(e) => setSpendDrafts((p) => ({ ...p, [r.adSetName]: e.target.value }))}
-                      onKeyDown={(e) => e.key === 'Enter' && saveSpend(r.adSetName)}
-                      onBlur={() => spendDrafts[r.adSetName] != null && saveSpend(r.adSetName)}
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-right">{r.leadCount}</td>
-                  <td className="px-3 py-2 text-right">{r.won}</td>
-                  <td className="px-3 py-2 text-right">{fmtMoney(r.oneTimeRev)}</td>
-                  <td className="px-3 py-2 text-right">{fmtMoney(r.mrr)}</td>
-                  <td className="px-3 py-2 text-right font-semibold">
-                    {r.annualizedRoas != null ? `${r.annualizedRoas.toFixed(2)}x` : '—'}
-                  </td>
-                </tr>
-                {ads[r.adSetName]?.map((a) => (
-                  <tr key={`${r.adSetName}:${a.adName}`} className="border-t border-zinc-900 bg-zinc-950/60 text-xs text-zinc-400">
-                    <td className="py-1.5 pr-3 pl-8">{a.adName || '(no ad name)'}</td>
-                    <td></td>
-                    <td></td>
-                    <td className="px-3 py-1.5 text-right">{a.leadCount}</td>
-                    <td className="px-3 py-1.5 text-right">{a.won}</td>
-                    <td className="px-3 py-1.5 text-right" colSpan={3}>
-                      {a.appts} appts
+      <div className="card mt-6 overflow-hidden">
+        <p className="eyebrow border-b border-line px-4 py-3 text-muted">
+          By ad set &middot; type spend, press Enter to save &middot; ROAS = (1x + 12&times;MRR) / spend
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-xs font-semibold text-muted">
+                <th className="px-4 py-2">Ad set</th>
+                <th className="px-4 py-2">Campaign</th>
+                <th className="px-4 py-2 text-right">Ad spend</th>
+                <th className="px-4 py-2 text-right">Leads</th>
+                <th className="px-4 py-2 text-right">Won</th>
+                <th className="px-4 py-2 text-right">One-time rev</th>
+                <th className="px-4 py-2 text-right">New MRR</th>
+                <th className="px-4 py-2 text-right">ROAS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {roas.map((r) => (
+                <Fragment key={r.adSetName}>
+                  <tr className="border-b border-line">
+                    <td className="px-4 py-2.5">
+                      <button onClick={() => toggleAds(r.adSetName)} className="text-left font-semibold hover:text-navy">
+                        <span className="mr-1 inline-block w-3 text-faint">{ads[r.adSetName] ? '▾' : '▸'}</span>
+                        {r.adSetName}
+                      </button>
+                    </td>
+                    <td className="max-w-48 truncate px-4 py-2.5 text-xs text-faint">{r.campaignName}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <input
+                        className="field w-24 border-amber/50 bg-ambersoft/60 text-right"
+                        value={spendDrafts[r.adSetName] ?? (r.spend ? String(r.spend) : '')}
+                        placeholder="$0"
+                        onChange={(e) => setSpendDrafts((p) => ({ ...p, [r.adSetName]: e.target.value }))}
+                        onKeyDown={(e) => e.key === 'Enter' && saveSpend(r.adSetName)}
+                        onBlur={() => spendDrafts[r.adSetName] != null && saveSpend(r.adSetName)}
+                      />
+                    </td>
+                    <td className="px-4 py-2.5 text-right">{r.leadCount}</td>
+                    <td className="px-4 py-2.5 text-right">{r.won}</td>
+                    <td className="px-4 py-2.5 text-right">{fmtMoney(r.oneTimeRev)}</td>
+                    <td className="px-4 py-2.5 text-right">{fmtMoney(r.mrr)}</td>
+                    <td className="px-4 py-2.5 text-right font-bold text-navy">
+                      {r.annualizedRoas != null ? `${r.annualizedRoas.toFixed(2)}x` : '—'}
                     </td>
                   </tr>
-                ))}
-              </>
-            ))}
-            {roas.length === 0 && (
-              <tr>
-                <td className="px-3 py-3 text-zinc-500" colSpan={8}>
-                  No ad-attributed leads yet
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  {ads[r.adSetName]?.map((a) => (
+                    <tr key={`${r.adSetName}:${a.adName}`} className="border-b border-line bg-canvas/60 text-xs text-muted">
+                      <td className="py-2 pr-4 pl-11">{a.adName || '(no ad name)'}</td>
+                      <td></td>
+                      <td></td>
+                      <td className="px-4 py-2 text-right">{a.leadCount}</td>
+                      <td className="px-4 py-2 text-right">{a.won}</td>
+                      <td className="px-4 py-2 text-right" colSpan={3}>
+                        {a.appts} appts
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
+              ))}
+              {roas.length === 0 && (
+                <tr>
+                  <td className="px-4 py-3 text-faint" colSpan={8}>
+                    No ad-attributed leads yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 }
 
-function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function RateTile({ label, sub, value }: { label: string; sub: string; value: string }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
-      <div className={`${color} px-3 py-2 text-sm font-bold`}>{title}</div>
-      <div className="divide-y divide-zinc-900">{children}</div>
+    <div className="card px-5 py-4">
+      <p className="eyebrow text-muted">{label}</p>
+      <p className="mt-1 text-3xl font-bold text-navydeep">{value}</p>
+      <p className="text-xs text-faint">{sub}</p>
     </div>
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between px-3 py-1.5 text-sm">
-      <span className="text-zinc-400">{label}</span>
-      <span className="font-semibold tabular-nums">{value}</span>
+    <div className="card overflow-hidden">
+      <p className="eyebrow border-b border-line px-4 py-3 text-muted">{title}</p>
+      <div className="divide-y divide-line">{children}</div>
+    </div>
+  );
+}
+
+function Row({ label, value, strong }: { label: string; value: React.ReactNode; strong?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between px-4 py-2 text-sm">
+      <span className="text-muted">{label}</span>
+      <span className={`tabular-nums ${strong ? 'font-bold text-navy' : 'font-semibold'}`}>{value}</span>
     </div>
   );
 }

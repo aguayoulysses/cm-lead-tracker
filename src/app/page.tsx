@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { api, type Buckets, type BucketLead } from '@/components/api';
+import { api, statusChip, type Buckets, type BucketLead } from '@/components/api';
 import { LeadCard } from '@/components/lead-card';
 import { CalendarMonth } from '@/components/calendar-month';
 import { EodPanel } from '@/components/eod-panel';
@@ -35,40 +35,54 @@ export default function WorkPage() {
     localStorage.setItem('cmCloser', c);
   }
 
+  const todayLabel = buckets
+    ? new Date(`${buckets.today}T12:00:00`).toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      })
+    : '';
+
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs text-zinc-500">Closer:</span>
-        {closers.map((c) => (
-          <button
-            key={c}
-            onClick={() => pickCloser(c)}
-            className={`rounded-full px-3 py-1 text-sm ${
-              closer === c ? 'bg-emerald-600 font-bold text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-            }`}
-          >
-            {c}
-          </button>
-        ))}
-        <div className="ml-auto flex gap-1">
-          {(
-            [
-              ['list', 'Follow-Ups'],
-              ['calendar', 'Calendar'],
-              ['eod', 'End of Day'],
-            ] as [Tab, string][]
-          ).map(([t, label]) => (
+      <div className="mb-5 flex flex-wrap items-center gap-4">
+        <div className="flex overflow-hidden rounded-lg border border-line bg-card">
+          {closers.map((c) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded px-3 py-1.5 text-sm ${tab === t ? 'bg-zinc-700 font-bold' : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'}`}
+              key={c}
+              onClick={() => pickCloser(c)}
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                closer === c ? 'bg-navy text-white' : 'text-muted hover:bg-canvas hover:text-ink'
+              }`}
             >
-              {label}
+              {c}
             </button>
           ))}
+        </div>
+        <span className="text-sm text-muted">{todayLabel}</span>
+        <div className="ml-auto flex items-center gap-4">
+          <nav className="flex gap-1 rounded-lg border border-line bg-card p-0.5">
+            {(
+              [
+                ['list', 'Follow-Ups'],
+                ['calendar', 'Calendar'],
+                ['eod', 'End of Day'],
+              ] as [Tab, string][]
+            ).map(([t, label]) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                  tab === t ? 'bg-bluesoft text-blueink' : 'text-muted hover:text-ink'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
           <button
             onClick={() => setShowNewLead(true)}
-            className="rounded bg-emerald-700 px-3 py-1.5 text-sm font-bold hover:bg-emerald-600"
+            className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navydeep"
           >
             + New lead
           </button>
@@ -76,10 +90,10 @@ export default function WorkPage() {
       </div>
 
       {tab === 'list' && buckets && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Bucket title={`OVERDUE (${buckets.overdue.length})`} color="bg-red-800" leads={buckets.overdue} onOpen={setOpenLead} />
-          <Bucket title={`DUE TODAY (${buckets.dueToday.length})`} color="bg-amber-600" leads={buckets.dueToday} onOpen={setOpenLead} />
-          <Bucket title={`NEXT 7 DAYS (${buckets.next7.length})`} color="bg-zinc-700" leads={buckets.next7} onOpen={setOpenLead} />
+        <div className="grid items-start gap-5 md:grid-cols-3">
+          <Bucket tone="red" label="Overdue" leads={buckets.overdue} onOpen={setOpenLead} />
+          <Bucket tone="amber" label="Due today" leads={buckets.dueToday} onOpen={setOpenLead} />
+          <Bucket tone="blue" label="Next 7 days" leads={buckets.next7} onOpen={setOpenLead} />
         </div>
       )}
 
@@ -112,37 +126,51 @@ export default function WorkPage() {
   );
 }
 
+const TONES: Record<string, { rail: string; dot: string; count: string }> = {
+  red: { rail: 'bg-red', dot: 'bg-red', count: 'bg-redsoft text-redink' },
+  amber: { rail: 'bg-amber', dot: 'bg-amber', count: 'bg-ambersoft text-amberink' },
+  blue: { rail: 'bg-blue', dot: 'bg-blue', count: 'bg-bluesoft text-blueink' },
+};
+
 function Bucket({
-  title,
-  color,
+  tone,
+  label,
   leads,
   onOpen,
 }: {
-  title: string;
-  color: string;
+  tone: keyof typeof TONES;
+  label: string;
   leads: BucketLead[];
   onOpen: (id: number) => void;
 }) {
+  const t = TONES[tone];
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
-      <div className={`${color} px-3 py-2 text-sm font-bold`}>{title}</div>
-      {leads.length === 0 && <p className="px-3 py-3 text-sm text-zinc-500">None</p>}
-      {leads.map((l) => (
-        <button
-          key={l.id}
-          onClick={() => onOpen(l.id)}
-          className="block w-full border-b border-zinc-900 px-3 py-2 text-left hover:bg-zinc-900"
-        >
-          <span className="flex items-baseline justify-between">
-            <b className="text-sm">{l.name}</b>
-            <span className="text-xs text-zinc-500">{l.date}</span>
-          </span>
-          <span className="text-xs text-zinc-500">
-            {l.status}
-            {l.by && ` · ${l.by}`}
-          </span>
-        </button>
-      ))}
+    <div className="card overflow-hidden">
+      <div className={`h-1 ${t.rail}`} />
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+        <span className={`h-2 w-2 rounded-full ${t.dot}`} />
+        <span className="eyebrow text-muted">{label}</span>
+        <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${t.count}`}>{leads.length}</span>
+      </div>
+      {leads.length === 0 && <p className="px-4 pb-4 text-sm text-faint">Nothing here — clear.</p>}
+      <div className="max-h-[65vh] overflow-y-auto">
+        {leads.map((l) => (
+          <button
+            key={l.id}
+            onClick={() => onOpen(l.id)}
+            className="block w-full border-t border-line px-4 py-2.5 text-left transition-colors hover:bg-bluesoft/50"
+          >
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="truncate text-sm font-semibold">{l.name}</span>
+              <span className="shrink-0 text-xs text-faint">{l.date?.slice(5).replace('-', '/')}</span>
+            </span>
+            <span className="mt-1 flex items-center gap-2">
+              <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${statusChip(l.status)}`}>{l.status}</span>
+              {l.by && <span className="text-[11px] text-faint">{l.by}</span>}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -164,36 +192,28 @@ function NewLeadModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-lg border border-zinc-800 bg-zinc-900 p-5" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-3 font-bold">New lead (manual)</h3>
-        {error && <p className="mb-2 rounded bg-red-950 px-3 py-2 text-sm text-red-300">{error}</p>}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navydeep/40 p-4" onClick={onClose}>
+      <div className="card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="mb-1 text-base font-bold">New lead</h3>
+        <p className="mb-3 text-xs text-muted">Added with status New, due for follow-up today.</p>
+        {error && <p className="mb-2 rounded-lg bg-redsoft px-3 py-2 text-sm text-redink">{error}</p>}
         {(
           [
-            ['firstName', 'First name *'],
+            ['firstName', 'First name (required)'],
             ['lastName', 'Last name'],
             ['phone', 'Phone'],
             ['email', 'Email'],
-            ['leadSource', 'Lead source (e.g. Referral)'],
+            ['leadSource', 'Lead source — e.g. Referral'],
           ] as [keyof typeof form, string][]
         ).map(([k, label]) => (
-          <input
-            key={k}
-            placeholder={label}
-            value={form[k]}
-            onChange={set(k)}
-            className="mb-2 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-          />
+          <input key={k} placeholder={label} value={form[k]} onChange={set(k)} className="field mb-2" />
         ))}
-        <textarea
-          placeholder="Notes"
-          value={form.notes}
-          onChange={set('notes')}
-          rows={2}
-          className="mb-3 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-        />
-        <button onClick={create} className="w-full rounded bg-emerald-600 py-2 text-sm font-bold hover:bg-emerald-500">
-          Add lead (due today)
+        <textarea placeholder="Notes" value={form.notes} onChange={set('notes')} rows={2} className="field mb-3" />
+        <button
+          onClick={create}
+          className="w-full rounded-lg bg-navy py-2 text-sm font-semibold text-white hover:bg-navydeep"
+        >
+          Add lead
         </button>
       </div>
     </div>

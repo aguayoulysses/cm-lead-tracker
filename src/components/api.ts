@@ -67,6 +67,15 @@ export function suggestDate(status: string, today: string): string {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
+/** Soft-tinted chip classes per status, Cavenaugh palette. */
+export function statusChip(status: string): string {
+  if (status === 'Closed Won') return 'bg-greensoft text-greenink';
+  if (status === 'Booked') return 'bg-bluesoft text-blueink';
+  if (CLOSED.includes(status)) return 'bg-redsoft text-redink';
+  if (status === 'New') return 'bg-ambersoft text-amberink';
+  return 'bg-canvas text-muted';
+}
+
 export function fmtMoney(n: number): string {
   return `$${Math.round(n).toLocaleString('en-US')}`;
 }

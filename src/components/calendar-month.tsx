@@ -42,7 +42,7 @@ export function CalendarMonth({ closer, onOpenLead }: { closer: string; onOpenLe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [closer]);
 
-  if (!data) return <p className="text-zinc-400">Loading&hellip;</p>;
+  if (!data) return <p className="text-muted">Loading&hellip;</p>;
 
   const [y, m] = data.month.split('-').map(Number);
   const firstDow = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
@@ -59,83 +59,108 @@ export function CalendarMonth({ closer, onOpenLead }: { closer: string; onOpenLe
     timeZone: 'UTC',
   });
   const selected = selectedDay ? data.days[selectedDay] : null;
+  const selectedCount = (selected?.followUps.length ?? 0) + (selected?.appts.length ?? 0);
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
+    <div className="flex flex-col gap-5 lg:flex-row">
       <div className="flex-1">
-        <div className="mb-2 flex items-center gap-3">
-          <button onClick={() => load(monthShift(data.month, -1))} className="rounded border border-zinc-700 px-2 py-1 text-sm hover:bg-zinc-800">
+        <div className="mb-3 flex items-center gap-3">
+          <button
+            onClick={() => load(monthShift(data.month, -1))}
+            className="rounded-lg border border-line bg-card px-3 py-1 text-sm text-muted hover:text-navy"
+          >
             &larr;
           </button>
-          <span className="min-w-40 text-center font-semibold">{monthName}</span>
-          <button onClick={() => load(monthShift(data.month, 1))} className="rounded border border-zinc-700 px-2 py-1 text-sm hover:bg-zinc-800">
+          <span className="min-w-36 text-center text-base font-bold text-navydeep">{monthName}</span>
+          <button
+            onClick={() => load(monthShift(data.month, 1))}
+            className="rounded-lg border border-line bg-card px-3 py-1 text-sm text-muted hover:text-navy"
+          >
             &rarr;
           </button>
-          <span className="ml-4 text-xs text-zinc-500">&#9742; follow-up due &nbsp; &#9733; appointment</span>
+          <span className="ml-4 flex items-center gap-4 text-xs text-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-blue" /> follow-up due
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-green" /> appointment
+            </span>
+          </span>
         </div>
-        <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-zinc-800 bg-zinc-800">
-          {DOW.map((d) => (
-            <div key={d} className="bg-zinc-900 px-2 py-1 text-center text-xs font-bold text-zinc-400">
-              {d}
-            </div>
-          ))}
-          {cells.map((day, i) => {
-            const entry = day ? data.days[day] : undefined;
-            const isToday = day === data.today;
-            return (
-              <div
-                key={i}
-                onClick={() => day && setSelectedDay(day)}
-                className={`min-h-20 cursor-pointer bg-zinc-950 p-1.5 text-xs hover:bg-zinc-900 ${
-                  day && selectedDay === day ? 'ring-2 ring-inset ring-emerald-500' : ''
-                }`}
-              >
-                {day && (
-                  <>
-                    <span className={`text-[11px] font-semibold ${isToday ? 'rounded bg-emerald-600 px-1 text-white' : 'text-zinc-500'}`}>
-                      {Number(day.slice(8))}
-                    </span>
-                    {entry?.followUps.slice(0, 3).map((f) => (
-                      <p key={`f${f.leadId}`} className="truncate text-zinc-300">
-                        &#9742; {f.name}
-                      </p>
-                    ))}
-                    {entry?.appts.slice(0, 3).map((a) => (
-                      <p key={`a${a.leadId}`} className="truncate text-amber-300">
-                        &#9733; {a.name}
-                        {a.time ? ` ${a.time}` : ''}
-                      </p>
-                    ))}
-                    {entry && entry.followUps.length + entry.appts.length > 6 && (
-                      <p className="text-zinc-500">+{entry.followUps.length + entry.appts.length - 6} more</p>
-                    )}
-                  </>
-                )}
+
+        <div className="card overflow-hidden">
+          <div className="grid grid-cols-7 border-b border-line">
+            {DOW.map((d) => (
+              <div key={d} className="eyebrow px-2 py-2 text-center text-faint">
+                {d}
               </div>
-            );
-          })}
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {cells.map((day, i) => {
+              const entry = day ? data.days[day] : undefined;
+              const isToday = day === data.today;
+              const isSelected = !!day && selectedDay === day;
+              return (
+                <div
+                  key={i}
+                  onClick={() => day && setSelectedDay(day)}
+                  className={`min-h-24 border-t border-r border-line p-1.5 text-xs last:border-r-0 [&:nth-child(7n)]:border-r-0 ${
+                    day ? 'cursor-pointer hover:bg-bluesoft/40' : 'bg-canvas/60'
+                  } ${isSelected ? 'bg-bluesoft/70' : ''}`}
+                >
+                  {day && (
+                    <>
+                      <span
+                        className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
+                          isToday ? 'bg-navy text-white' : 'text-muted'
+                        }`}
+                      >
+                        {Number(day.slice(8))}
+                      </span>
+                      {entry?.followUps.slice(0, 3).map((f) => (
+                        <p key={`f${f.leadId}`} className="mt-0.5 truncate text-blueink">
+                          <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-blue align-middle" />
+                          {f.name}
+                        </p>
+                      ))}
+                      {entry?.appts.slice(0, 3).map((a) => (
+                        <p key={`a${a.leadId}`} className="mt-0.5 truncate font-medium text-greenink">
+                          <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-green align-middle" />
+                          {a.name}
+                          {a.time ? ` · ${a.time}` : ''}
+                        </p>
+                      ))}
+                      {entry && entry.followUps.length + entry.appts.length > 6 && (
+                        <p className="mt-0.5 text-faint">+{entry.followUps.length + entry.appts.length - 6} more</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      <div className="w-full lg:w-72">
-        <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
-          <p className="mb-2 border-b border-zinc-800 pb-2 text-sm font-bold">
+      <div className="w-full lg:w-80">
+        <div className="card p-4">
+          <p className="eyebrow border-b border-line pb-2 text-muted">
             {selectedDay
-              ? `${selectedDay}  —  ${(selected?.followUps.length ?? 0) + (selected?.appts.length ?? 0)} lead${
-                  (selected?.followUps.length ?? 0) + (selected?.appts.length ?? 0) === 1 ? '' : 's'
-                }`
-              : 'Click a day → that day’s leads appear here'}
+              ? `${new Date(`${selectedDay}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${selectedCount} lead${selectedCount === 1 ? '' : 's'}`
+              : 'Select a day'}
           </p>
-          {selectedDay && !selected && <p className="text-sm text-zinc-500">Nothing due this day</p>}
+          {!selectedDay && <p className="pt-3 text-sm text-faint">Click a day to see its leads here.</p>}
+          {selectedDay && !selected && <p className="pt-3 text-sm text-faint">Nothing due this day.</p>}
           {selected?.followUps.map((f) => (
             <button
               key={`f${f.leadId}`}
               onClick={() => onOpenLead(f.leadId)}
-              className="block w-full rounded px-1 py-1 text-left text-sm hover:bg-zinc-800"
+              className="block w-full rounded-lg px-2 py-2 text-left hover:bg-bluesoft/50"
             >
-              &#9742; {f.name}
-              <span className="block text-xs text-zinc-500">
-                {f.status} &nbsp; {f.phone}
+              <span className="text-sm font-semibold text-ink">{f.name}</span>
+              <span className="block text-xs text-muted">
+                Follow-up &middot; {f.status} &middot; {f.phone}
               </span>
             </button>
           ))}
@@ -143,12 +168,11 @@ export function CalendarMonth({ closer, onOpenLead }: { closer: string; onOpenLe
             <button
               key={`a${a.leadId}`}
               onClick={() => onOpenLead(a.leadId)}
-              className="block w-full rounded px-1 py-1 text-left text-sm text-amber-300 hover:bg-zinc-800"
+              className="block w-full rounded-lg px-2 py-2 text-left hover:bg-greensoft/60"
             >
-              &#9733; {a.name}
-              <span className="block text-xs text-zinc-500">
-                {a.status}
-                {a.time ? ` ${a.time}` : ''} &nbsp; {a.phone}
+              <span className="text-sm font-semibold text-greenink">{a.name}</span>
+              <span className="block text-xs text-muted">
+                Appointment{a.time ? ` ${a.time}` : ''} &middot; {a.status} &middot; {a.phone}
               </span>
             </button>
           ))}

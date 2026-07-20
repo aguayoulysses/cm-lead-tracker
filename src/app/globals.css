@@ -1,9 +1,51 @@
 @import 'tailwindcss';
 
+/* Cavenaugh brand tokens (from cavenaugh-growth-system) */
+@theme {
+  --color-canvas: #f2f6fa;
+  --color-card: #ffffff;
+  --color-line: #d8e2ee;
+  --color-ink: #16283e;
+  --color-muted: #4c6076;
+  --color-faint: #9fb4cc;
+  --color-navy: #1d4e7e;
+  --color-navydeep: #1d3a57;
+  --color-blue: #4e86c2;
+  --color-bluesoft: #eaf2fa;
+  --color-blueink: #2f62a0;
+  --color-green: #2c7a57;
+  --color-greensoft: #e3f1ea;
+  --color-greenink: #226347;
+  --color-red: #c06060;
+  --color-redsoft: #f9ecec;
+  --color-redink: #9c4343;
+  --color-amber: #b3862d;
+  --color-ambersoft: #f7efdc;
+  --color-amberink: #8a671f;
+  --font-sans: 'Avenir Next', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  @apply bg-zinc-950 text-zinc-100 antialiased;
+  @apply bg-canvas text-ink antialiased;
+  font-feature-settings: 'tnum';
+}
+
+.card {
+  @apply rounded-xl border border-line bg-card;
+  box-shadow: 0 1px 2px rgba(22, 40, 62, 0.05);
+}
+
+.eyebrow {
+  @apply text-[11px] font-semibold tracking-[0.14em] uppercase;
+}
+
+.field {
+  @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none;
+}
+.field:focus {
+  @apply border-blue ring-2 ring-bluesoft;
 }
