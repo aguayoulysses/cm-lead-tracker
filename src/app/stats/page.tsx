@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { api, fmtMoney, fmtPct } from '@/components/api';
 import { Avatar } from '@/components/avatar';
+import { DateRangePicker } from '@/components/date-range';
 
 interface Scorecard {
   closer: string;
@@ -134,22 +135,16 @@ export default function StatsPage() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-1">
-          <input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="bg-transparent py-1 text-sm text-ink outline-none"
+        {from && to && (
+          <DateRangePicker
+            from={from}
+            to={to}
+            onChange={(a, b) => {
+              setFrom(a);
+              setTo(b);
+            }}
           />
-          <span className="text-faint">&ndash;</span>
-          <input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="bg-transparent py-1 text-sm text-ink outline-none"
-          />
-        </div>
-        <span className="text-xs text-faint">Month-to-date by default</span>
+        )}
       </div>
 
       {byCloser.length > 0 && (
