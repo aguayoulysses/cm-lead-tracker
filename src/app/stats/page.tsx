@@ -119,24 +119,37 @@ export default function StatsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end gap-3">
-        <div>
-          <label className="text-xs font-medium text-muted">Closer</label>
-          <select value={closer} onChange={(e) => setCloser(e.target.value)} className="field mt-1 max-w-36">
-            {closers.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        <div className="flex overflow-hidden rounded-lg border border-line bg-card">
+          {closers.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCloser(c)}
+              className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors ${
+                closer === c ? 'bg-navy text-white' : 'text-muted hover:bg-canvas hover:text-ink'
+              }`}
+            >
+              {c !== 'All' && <Avatar name={c} size={22} />}
+              {c}
+            </button>
+          ))}
         </div>
-        <div>
-          <label className="text-xs font-medium text-muted">From</label>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="field mt-1" />
+        <div className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-1">
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="bg-transparent py-1 text-sm text-ink outline-none"
+          />
+          <span className="text-faint">&ndash;</span>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="bg-transparent py-1 text-sm text-ink outline-none"
+          />
         </div>
-        <div>
-          <label className="text-xs font-medium text-muted">To</label>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="field mt-1" />
-        </div>
-        <span className="pb-2 text-xs text-faint">Defaults to month-to-date</span>
+        <span className="text-xs text-faint">Month-to-date by default</span>
       </div>
 
       {byCloser.length > 0 && (

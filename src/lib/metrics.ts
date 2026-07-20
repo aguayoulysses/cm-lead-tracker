@@ -1,6 +1,6 @@
-import { and, eq, gte, isNotNull, lte, ne, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gte, isNotNull, lte, ne, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { adSpend, kpiLog, leads, settings } from '@/db/schema';
+import { adSpend, closers, kpiLog, leads, settings } from '@/db/schema';
 import { speedToLeadMinutes } from './dates';
 
 /**
@@ -170,8 +170,14 @@ export async function byCloser(range?: { from: string; to: string }) {
     .groupBy(kpiLog.closer);
   const actMap = new Map(activity.map((a) => [a.closer, a]));
 
-  const names = new Set([...rows.map((r) => r.closer), ...activity.map((a) => a.closer)]);
-  return [...names]
+  // The board is the active roster, always — zeros included, non-roster
+  // names in the data (e.g. legacy "Other") are left off.
+  const roster = await db.query.closers.findMany({
+    where: eq(closers.active, true),
+    orderBy: [asc(closers.sortOrder)],
+  });
+  return roster
+    .map((r) => r.name)
     .map((name) => {
       const r = rows.find((x) => x.closer === name);
       const a = actMap.get(name);
